@@ -5,7 +5,7 @@ from Strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [TestStrat]
+strategies = [OverMAStrat]
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 for strat in strategies:
