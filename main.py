@@ -1,11 +1,11 @@
 from datetime import datetime
 import backtrader as bt
 import backtrader.feeds as btfeeds
-from Strategies import *
+from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [OverMAStrat]
+strategies = [VolSZOStrat, PivotPointsStrat, BuyAndHoldAll, BuyAndHoldSPY]
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 for strat in strategies:
@@ -21,7 +21,7 @@ for strat in strategies:
     dirs = listdir(dir)
     shuffle(dirs)
     for filename in dirs:
-        if random() < 0.7:
+        if random() < 1:
             cerebro.adddata(btfeeds.GenericCSVData(
                 dataname=dir+'/'+filename,
                 dtformat=('%Y-%m-%d'),
