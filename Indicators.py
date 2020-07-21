@@ -64,6 +64,18 @@ class ZackOverMA(bt.Indicator):
         self.lines.slope = self.lines.momentum(0) - self.lines.momentum(-1)
         self.lines.zero = bt.LineNum(0)
 
+class ZackPrevHigh(bt.Indicator):
+    lines = ('high', 'low', 'midway')
+    params = (
+        ('period', 50),
+    )
+    plotinfo=dict(subplot=False)
+
+    def __init__(self):
+        self.lines.high = btind.Highest(self.data, period=self.p.period)
+        self.lines.low = btind.Lowest(self.data, period=self.p.period)
+        self.lines.midway = (self.lines.high(0) + self.lines.low(0)) / 2
+
 class AboveMAAccum(bt.Indicator):
     lines = ('accum', 'slope')
     params = (

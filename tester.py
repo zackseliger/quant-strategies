@@ -7,7 +7,7 @@ from Indicators import *
 cerebro = bt.Cerebro()
 
 # cerebro.addindicator(btind.MovingAverageSimple, period=50)
-# cerebro.addindicator(AboveMAAccum)
+cerebro.addindicator(ZackPrevHigh, period=50)
 cerebro.addstrategy(OverMAStrat)
 cerebro.addanalyzer(bt.analyzers.AnnualReturn)
 cerebro.addanalyzer(bt.analyzers.DrawDown)

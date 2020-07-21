@@ -101,8 +101,8 @@ class OverMAStrat(bt.Strategy):
     ('avglength', 15),
     ('sumlength', 50),
     ('atrperiod', 50),
-    ('pivotsumlength', 5),
     ('pivotavglength', 10),
+    ('pivotsumlength', 5),
     ('mabullpoint', 0.1)
   )
 
@@ -155,14 +155,13 @@ class OverMAStrat(bt.Strategy):
         else:
           continue
 
-      if d.avgvolume > 1000000: # volume indicator
-        if d.pivot > 0:
-          if d.overma - d.overma[-1] > 0 and d.overma < self.p.mabullpoint and d.maslope > 0: # trend indicator
-            self.buy(d, size=buysize)
-            available_cash -= d*buysize
-            self.logfile.write(str(d.datetime.date(0)) + " BUY " + d._name + " " + str(buysize) + " " + str(d.close[0])+"\n")
-            # put in stoploss
-            # d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.Stop, price=d-d.atr*5)
+      if d.pivot > 0 and d.maslope > 0: # trend indicators
+        if d.overma - d.overma[-1] > 0 and d.overma < self.p.mabullpoint: # main indicator
+          self.buy(d, size=buysize)
+          available_cash -= d*buysize
+          self.logfile.write(str(d.datetime.date(0)) + " BUY " + d._name + " " + str(buysize) + " " + str(d.close[0])+"\n")
+          # put in stoploss
+          # d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.Stop, price=d-d.atr)
 
 class TestStrat(bt.Strategy):
   params = (
