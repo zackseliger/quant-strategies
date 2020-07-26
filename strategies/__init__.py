@@ -3,3 +3,4 @@ from .pivotpoints import *
 from .overma import *
 from .momentum import *
 from .buyandhold import *
+from .test import *

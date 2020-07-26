@@ -32,7 +32,7 @@ class ZackPivotPoints(bt.Indicator):
 
     def __init__(self):
         price = (self.data.close+self.data.high+self.data.low) / 3
-        vol_price = btind.SumN(price*self.data.volume, period=self.p.sumlength) / btind.SumN(self.data.volume, period=self.p.sumlength)
+        vol_price = btind.SumN(price*self.data.volume, period=self.p.sumlength) / btind.SumN(self.data.volume+1, period=self.p.sumlength)
         r2 = price + self.data.high - self.data.low
         s2 = price - self.data.high + self.data.low
 
@@ -44,9 +44,22 @@ class ZackPivotPoints(bt.Indicator):
         support = btind.MovingAverageWilder(sslope, period=self.p.avglength)
         difference = btind.MovingAverageWilder(diff, period=self.p.avglength)
 
-        self.lines.final = (resistance+support+difference) / 3
+        self.lines.final = (resistance+support+difference*5) / 3
         # self.lines.final = difference
         self.lines.zero = bt.LineNum(0)
+
+class ZPP(bt.Indicator):
+    lines = ('buy', 'sell')
+    params = (('avglength',12),)
+
+    def __init__(self):
+        self.price = (self.data.close+self.data.high+self.data.low) / 3
+        self.r2 = btind.MovingAverageSimple(self.price*2-self.data.low, period=self.p.avglength)
+        self.s2 = btind.MovingAverageSimple(self.price*2-self.data.high, period=self.p.avglength)
+
+    def next(self):
+        self.lines.buy[0] = (self.price > self.s2 and self.price[-1] <= self.s2[-1])
+        self.lines.sell[0] = (self.price < self.r2 and self.price[-1] >= self.r2[-1])
 
 class ZackOverMA(bt.Indicator):
     lines = ('momentum', 'slope','zero')
@@ -80,9 +93,11 @@ class AboveMAAccum(bt.Indicator):
     lines = ('accum', 'slope')
     params = (
         ('avglength', 21),
+        ('sumlength', 50)
     )
 
     def __init__(self):
         ma = btind.MovingAverageSimple(self.data, period=self.p.avglength)
-        self.lines.accum = btind.Accum((self.data - ma) / ma)
+        # self.lines.accum = btind.Accum((self.data - ma) / ma)
+        self.lines.accum = btind.SumN((self.data-ma) / ma, period=self.p.sumlength)
         self.lines.slope = self.accum(0) - self.accum(-1)

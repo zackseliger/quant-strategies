@@ -5,7 +5,7 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [VolSZOStrat, PivotPointsStrat, BuyAndHoldAll, BuyAndHoldSPY]
+strategies = [PivotPointsStrat, OverMAStrat, OverMAStratTest, TestStrategy, BuyAndHoldAll]
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 for strat in strategies:
@@ -17,11 +17,11 @@ for strat in strategies:
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, annualize=True, riskfreerate=0.01)
 
     # add data
-    dir = 'stocks/2016'
+    dir = 'stocks/2008'
     dirs = listdir(dir)
     shuffle(dirs)
     for filename in dirs:
-        if random() < 1:
+        if random() < 0.2:
             cerebro.adddata(btfeeds.GenericCSVData(
                 dataname=dir+'/'+filename,
                 dtformat=('%Y-%m-%d'),

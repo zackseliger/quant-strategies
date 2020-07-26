@@ -1,20 +1,19 @@
 from datetime import datetime
 import backtrader as bt
 import backtrader.feeds as btfeeds
-from Strategies import *
+from strategies import *
 from Indicators import *
 
 cerebro = bt.Cerebro()
 
 # cerebro.addindicator(btind.MovingAverageSimple, period=50)
-cerebro.addindicator(ZackPrevHigh, period=50)
-cerebro.addstrategy(OverMAStrat)
+cerebro.addstrategy(TestStrategy)
 cerebro.addanalyzer(bt.analyzers.AnnualReturn)
 cerebro.addanalyzer(bt.analyzers.DrawDown)
 cerebro.addanalyzer(bt.analyzers.SharpeRatio, annualize=True, riskfreerate=0.01)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-      dataname='stocks/2016/TRIP.csv',
+      dataname='stocks/2008/SPY.csv',
       dtformat=('%Y-%m-%d'),
 
       datetime=0,
