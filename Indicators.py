@@ -78,16 +78,16 @@ class ZackOverMA(bt.Indicator):
         self.lines.zero = bt.LineNum(0)
 
 class ZackPrevHigh(bt.Indicator):
-    lines = ('high', 'low', 'midway')
+    lines = ('top', 'bot', 'midway')
     params = (
         ('period', 50),
     )
     plotinfo=dict(subplot=False)
 
     def __init__(self):
-        self.lines.high = btind.Highest(self.data, period=self.p.period)
-        self.lines.low = btind.Lowest(self.data, period=self.p.period)
-        self.lines.midway = (self.lines.high(0) + self.lines.low(0)) / 2
+        self.lines.top = btind.Highest(self.data, period=self.p.period)
+        self.lines.bot = btind.Lowest(self.data, period=self.p.period)
+        self.lines.midway = (self.lines.top(0) + self.lines.bot(0)) / 2
 
 class AboveMAAccum(bt.Indicator):
     lines = ('accum', 'slope')

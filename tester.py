@@ -13,7 +13,7 @@ cerebro.addanalyzer(bt.analyzers.DrawDown)
 cerebro.addanalyzer(bt.analyzers.SharpeRatio, annualize=True, riskfreerate=0.01)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-      dataname='stocks/2008/SPY.csv',
+      dataname='stocks/2008/BAC.csv',
       dtformat=('%Y-%m-%d'),
 
       datetime=0,

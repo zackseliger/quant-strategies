@@ -7,16 +7,16 @@ from random import random, shuffle
 
 if __name__ == "__main__":
 	# setup strategy
-	strategy = PivotPointsStrat
+	strategy = TestStrategy
 	cerebro = bt.Cerebro()
-	cerebro.optstrategy(strategy, test=range(5,55,5))
+	cerebro.optstrategy(strategy, test=range(5,35,5))
 
 	# get stocks
 	dir = 'stocks/2008'
 	dirs = listdir(dir)
 	shuffle(dirs)
 	for filename in dirs:
-		if random() < 0.1:
+		if random() < 0.5:
 			cerebro.adddata(btfeeds.GenericCSVData(
 					dataname=dir+'/'+filename,
 					dtformat=('%Y-%m-%d'),
