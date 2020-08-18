@@ -1,4 +1,3 @@
-from datetime import datetime
 import backtrader as bt
 import backtrader.feeds as btfeeds
 from strategies import *
@@ -11,7 +10,7 @@ if __name__ == "__main__":
 	cerebro.addstrategy(TestStrategy2, recordstats=True)
 
 	# get stocks
-	dirs = ['stocks/2016']
+	dirs = ['stocks/2011etf']
 	files = []
 	for dir in dirs:
 		filenames = listdir(dir)
@@ -22,7 +21,7 @@ if __name__ == "__main__":
 
 	# add stocks as data
 	for filename in files:
-		if random() < 0.25:
+		if random() < 1:
 			cerebro.adddata(btfeeds.GenericCSVData(
 				dataname=filename,
 				dtformat=('%Y-%m-%d'),

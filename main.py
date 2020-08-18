@@ -5,7 +5,7 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [OverMAStrat, OverMATest, TestStrategy, TestStrategy2, BuyAndHoldAll]
+strategies = [TestStrategy, TestStrategy2, BuyAndHoldAll]
 
 # pre-pick stocks
 dir = 'stocks/2016'
@@ -13,8 +13,9 @@ stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.5:
+    if random() < 0.05:
         stocks.append(filename)
+# stocks = ['DIA.csv', 'DIA.csv', 'DIA.csv', 'DIA.csv', 'DIA.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv']
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 for strat in strategies:
@@ -42,6 +43,7 @@ for strat in strategies:
     # run stretegy and get stats
     results = cerebro.run()[0]
     sharpe_ratio = results.analyzers[2].get_analysis()['sharperatio']
+    if sharpe_ratio is None: sharpe_ratio = 0
     returns = results.analyzers[0].rets
     avg_returns = sum(returns)/len(returns)
     maxdrawdown = results.analyzers[1].get_analysis()['max'].drawdown/100

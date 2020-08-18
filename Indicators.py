@@ -65,17 +65,33 @@ class ZackOverMA(bt.Indicator):
     lines = ('momentum', 'slope','zero')
     params = (
         ('avglength', 21),
-        ('sumlength', 20)
+        ('sumlength', 20),
+        ('movav', btind.MovAv.Simple)
     )
 
     def __init__(self):
-        ma = btind.MovingAverageSimple(self.data, period=self.p.avglength)
+        ma = self.p.movav(self.data, period=self.p.avglength)
         over = btind.SumN(self.data > ma, period=self.p.sumlength)
         under = btind.SumN(self.data < ma, period=self.p.sumlength)
 
         self.lines.momentum = (over - under) / self.p.sumlength
         self.lines.slope = self.lines.momentum(0) - self.lines.momentum(-1)
         self.lines.zero = bt.LineNum(0)
+
+class ZackVolumeSignal(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('avgvollength', 12),
+        ('period', 12),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        avgvol = btind.ExponentialMovingAverage(self.data.volume, period=self.p.avgvollength)
+        priceUp = btind.If(self.data.volume(0)>avgvol(0), btind.If(self.data(0)>self.data(-1), (self.data(0)-self.data(-1))/self.data(0), 0), 0)
+        priceDown = btind.If(self.data.volume(0)>avgvol(0), btind.If(self.data(0)<self.data(-1), (self.data(-1)-self.data(0))/self.data(0), 0), 0)
+        self.lines.up = self.p.movav(priceUp, period=self.p.period)
+        self.lines.down = self.p.movav(priceDown, period=self.p.period)
 
 class ZackPrevHigh(bt.Indicator):
     lines = ('top', 'bot', 'midway')
@@ -101,3 +117,48 @@ class AboveMAAccum(bt.Indicator):
         # self.lines.accum = btind.Accum((self.data - ma) / ma)
         self.lines.accum = btind.SumN((self.data-ma) / ma, period=self.p.sumlength)
         self.lines.slope = self.accum(0) - self.accum(-1)
+
+class BHErgodic(bt.Indicator):
+    lines = ('erg', 'signal')
+    params = (
+        ('rPeriod', 2),
+        ('sPeriod', 10),
+        ('uPeriod', 5),
+        ('triggerPeriod', 3)
+    )
+
+    def __init__(self):
+        delta = self.data-self.data(-1)
+        delta2 = abs(self.data-self.data(-1))
+
+        rma = btind.ExponentialMovingAverage(delta, period=self.p.rPeriod)
+        rma2 = btind.ExponentialMovingAverage(delta2, period=self.p.rPeriod)
+        sma = btind.ExponentialMovingAverage(rma, period=self.p.sPeriod)
+        sma2 = btind.ExponentialMovingAverage(rma2, period=self.p.sPeriod)
+        uma = btind.ExponentialMovingAverage(sma, period=self.p.uPeriod)
+        uma2 = btind.ExponentialMovingAverage(sma2, period=self.p.uPeriod)
+
+        self.lines.erg = btind.If(uma2 > 0, 100*uma / uma2, 0)
+        self.lines.signal = btind.ExponentialMovingAverage(self.lines.erg, period=self.p.triggerPeriod)
+
+class ZackMADiff(bt.Indicator):
+    lines = ('res',)
+    params = (
+        ('period', 12),
+    )
+
+    def __init__(self):
+        ema = btind.ExponentialMovingAverage(self.data, period=self.p.period)
+        sma = btind.MovingAverageSimple(self.data, period=self.p.period)
+
+        self.lines.res = (ema*ema-sma*sma) / (self.data)
+
+class ZackAverageVelocity(bt.Indicator):
+    lines = ('vel',)
+    params = (
+        ('period', 50),
+    )
+
+    def __init__(self):
+        vel = self.data(0) - self.data(-1)
+        self.lines.vel = btind.SumN(vel/self.p.period, period=self.p.period)

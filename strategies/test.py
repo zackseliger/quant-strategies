@@ -1,6 +1,5 @@
 import backtrader as bt
 import backtrader.indicators as btind
-import backtrader.functions as btfunc
 from Indicators import *
 from stats.stats import Statistics
 
@@ -22,15 +21,13 @@ class TestStrategy(bt.Strategy):
 
   def __init__(self):
     for d in self.datas:
-      d.baseline = btind.MovingAverageSimple(d, period=20)
-      d.bbands = btind.BollingerBands(d, period=20)
-      d.prevhigh = ZackPrevHigh(d, period=10)
-      d.bandma_top = btind.MovingAverageSimple(d.prevhigh.top, period=10)
-      d.bandma_bot = btind.MovingAverageSimple(d.prevhigh.bot, period=10)
-      d.pivot = ZackPivotPoints(d)
+      d.overma = ZackOverMA(d, avglength=15, sumlength=50)
+      d.volsig = ZackVolumeSignal(d, avgvollength=12, period=7)
+      d.aroon = btind.AroonUpDown(d, period=14)
+      d.madiff = ZackMADiff(d, period=21)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.atrp = d.atr/d
 
     if self.p.log:
       self.logfile = open('teststrat.txt', 'w')
@@ -40,16 +37,6 @@ class TestStrategy(bt.Strategy):
 
   def notify_order(self, order):
     if order.status in [order.Completed]:
-      # takeprofit and moving stoploss up
-      if order == order.data.takeprofit:
-        self.cancel(order.data.stoploss)
-        order.data.stoploss = self.sell(order.data, exectype=bt.Order.Stop, size=self.getposition(order.data).size, price=order.data.buyprice)
-        order.data.tookprofit = True
-      # stoploss and resetting
-      elif order == order.data.stoploss:
-        self.cancel(order.data.takeprofit)
-        order.data.tookprofit = False
-
       # logging
       if not order.isbuy():
         self.log(str(self.data.datetime.date(0))+" SELL "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2))+" P/L: $"+str(order.executed.pnl))
@@ -60,70 +47,54 @@ class TestStrategy(bt.Strategy):
       if self.p.recordstats:
         d = order.data
         if order.isbuy():
-          self.statsfile.newpoint(ticker=d._name, date=str(self.data.datetime.date(0)), atrp=d.atrp[-1])
+          self.statsfile.newpoint(ticker=d._name, date=str(self.data.datetime.date(0)), atr=d.atr[-1])
         else:
           point = self.statsfile.getpoint('ticker', order.data._name)
           self.statsfile.completepoint(point, pnl=order.executed.pnl)
 
   def next(self):
     # orderedstocks = sorted(self.datas, key=lambda stock: stock.lowerma[0]-stock.lowerma[-1], reverse=True)
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.atrp, reverse=True)
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    available_cash = self.broker.get_cash()
 
     # sell
     for d in self.datas:
-      if self.getposition(d).size > 0 and d.tookprofit == True: # if we have a position and we hit our first takeprofit
-        if d.pivot < 0: # exit indicator
+      if self.getposition(d).size > 0: # if we have a position
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown>d.aroon.aroondown[-1]) or d.overma-d.overma[-1] < 0: # exit indicator
           self.sell(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
           self.cancel(d.stoploss)
 
     # buy
-    available_cash = self.broker.get_cash()
-    for d in self.datas:
+    for d in orderedstocks:
       if self.getposition(d).size > 0:
         continue
 
       # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*2
-      takeprofit_diff = d.atr[0]*1
-
-      # buysize = int(0.1*self.broker.get_value())
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
       buysize = int(risk / stoploss_diff)
-      # position can't be larger than 10% of our account
-      if d*buysize > 0.1*self.broker.get_value():
-        buysize = int(0.1*self.broker.get_value()/d)
+      if self.p.recordstats: buysize = int(2000/d)
 
-      if self.p.recordstats: buysize = int(2000/d) # FOR TESTING
       # we can't spend more than all our money
       if available_cash/d < buysize:
-        if available_cash > d:
-          buysize = int(available_cash/d)
-        else:
-          continue
+        continue
 
-      if d > d.baseline: # baseline
-        if d.bbands.top[0] < d.bbands.top[-1] and d.bbands.bot[0] > d.bbands.bot[-1]: # decreasing volatility
-          if d.bandma_top[0] - d.bandma_top[-1] > 0 and d.bandma_bot[0] - d.bandma_bot[-1] > 0: # higher highs higher lows
+      if d.overma-d.overma[-1] >= 0 and d.overma > -0.5: # trend indicators
+        if d.volsig.up > d.volsig.down: # trend indicator #2
+          if d.madiff-d.madiff[-1] > 0: # final indicator
             self.buy(d, size=buysize)
             available_cash -= d*buysize
-
-            # info for stoplosses, takeprofits, etc
-            d.buyprice = d.close[0]
-            d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.Stop, price=d.close[0]-stoploss_diff)
-            d.takeprofit = self.sell(d, size=int(buysize/2), exectype=bt.Order.Limit, price=d.close[0]+takeprofit_diff)
-            d.tookprofit = False
+            # info for stoploss
+            d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.StopTrail, trailamount=stoploss_diff)
 
 class TestStrategy2(bt.Strategy):
   params = (
     ('fastperiod', 5),
     ('slowperiod', 10),
-    ('log', True),
+    ('log', False),
     ('recordstats', False)
   )
-
-  # def stop(self):
-  #   pnl = round(self.broker.getvalue() - 10000,2)
-  #   print("param: {} final pnl: {}".format(self.p.test, pnl))
 
   def log(self, message):
     if self.p.log:
@@ -131,34 +102,22 @@ class TestStrategy2(bt.Strategy):
 
   def __init__(self):
     for d in self.datas:
-      d.baseline = btind.MovingAverageSimple(d, period=20)
-      d.bbands = btind.BollingerBands(d, period=20)
-      d.prevhigh = ZackPrevHigh(d, period=10)
-      d.bandma_top = btind.MovingAverageSimple(d.prevhigh.top, period=10)
-      d.bandma_bot = btind.MovingAverageSimple(d.prevhigh.bot, period=10)
-      d.pivot = ZackPivotPoints(d)
+      d.overma = ZackOverMA(d, avglength=15, sumlength=50)
+      d.volsig = ZackVolumeSignal(d, avgvollength=12, period=7)
+      d.aroon = btind.AroonUpDown(d, period=14)
+      d.madiff = ZackMADiff(d, period=21)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.atrp = d.atr/d
 
     if self.p.log:
-      self.logfile = open('teststrat.txt', 'w')
+      self.logfile = open('teststrat2.txt', 'w')
 
     if self.p.recordstats:
       self.statsfile = Statistics()
 
   def notify_order(self, order):
     if order.status in [order.Completed]:
-      # takeprofit and moving stoploss up
-      if order == order.data.takeprofit:
-        self.cancel(order.data.stoploss)
-        order.data.stoploss = self.sell(order.data, exectype=bt.Order.Stop, size=self.getposition(order.data).size, price=order.data.buyprice)
-        order.data.tookprofit = True
-      # stoploss and resetting
-      elif order == order.data.stoploss:
-        self.cancel(order.data.takeprofit)
-        order.data.tookprofit = False
-
       # logging
       if not order.isbuy():
         self.log(str(self.data.datetime.date(0))+" SELL "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2))+" P/L: $"+str(order.executed.pnl))
@@ -169,58 +128,45 @@ class TestStrategy2(bt.Strategy):
       if self.p.recordstats:
         d = order.data
         if order.isbuy():
-          self.statsfile.newpoint(ticker=d._name, date=str(self.data.datetime.date(0)), atrp=d.atrp[-1])
+          self.statsfile.newpoint(ticker=d._name, date=str(self.data.datetime.date(0)), atr=d.atr[-1], avgvel=d.baseline[-1], avgvelsquared=d.baseline[-1]**2, volup=d.volsig.up[-1], volupslope=d.volsig.up[-1]-d.volsig.up[-2])
         else:
           point = self.statsfile.getpoint('ticker', order.data._name)
           self.statsfile.completepoint(point, pnl=order.executed.pnl)
 
   def next(self):
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.lowerma[0]-stock.lowerma[-1], reverse=True)
-    atrporder = sorted(self.datas, key=lambda stock: stock.atrp, reverse=True)
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    available_cash = self.broker.get_cash()
 
     # sell
     for d in self.datas:
-      if self.getposition(d).size > 0 and d.tookprofit == True: # if we have a position and we hit our first takeprofit
-        if d.pivot < 0: # exit indicator
+      if self.getposition(d).size > 0: # if we have a position
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown>d.aroon.aroondown[-1]) or d.overma-d.overma[-1] < 0: # exit indicator
           self.sell(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
           self.cancel(d.stoploss)
 
     # buy
-    available_cash = self.broker.get_cash()
-    for d in atrporder:
+    for d in orderedstocks:
       if self.getposition(d).size > 0:
         continue
 
       # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*2
-      takeprofit_diff = d.atr[0]*1
-
-      # buysize = int(0.1*self.broker.get_value())
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
       buysize = int(risk / stoploss_diff)
-      # position can't be larger than 10% of our account
-      if d*buysize > 0.1*self.broker.get_value():
-        buysize = int(0.1*self.broker.get_value()/d)
-
       if self.p.recordstats: buysize = int(2000/d) # FOR TESTING
+
       # we can't spend more than all our money
       if available_cash/d < buysize:
-        if available_cash > d:
-          buysize = int(available_cash/d)
-        else:
-          continue
+        continue
 
-      if d > d.baseline: # baseline
-        if d.bbands.top[0] < d.bbands.top[-1] and d.bbands.bot[0] > d.bbands.bot[-1]: # decreasing volatility
-          if d.bandma_top[0] - d.bandma_top[-1] > 0 and d.bandma_bot[0] - d.bandma_bot[-1] > 0: # higher highs higher lows
+      if d.overma-d.overma[-1] >= 0 and d.overma > -0.5: # trend indicator
+        if d.volsig.up > d.volsig.down: # trend indicator #2
+          if d.madiff[0]-d.madiff[-1] > 0: # final indicator
             self.buy(d, size=buysize)
             available_cash -= d*buysize
-
-            # info for stoplosses, takeprofits, etc
-            d.buyprice = d.close[0]
-            d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.Stop, price=d.close[0]-stoploss_diff)
-            d.takeprofit = self.sell(d, size=int(buysize/2), exectype=bt.Order.Limit, price=d.close[0]+takeprofit_diff)
-            d.tookprofit = False
+            # stoploss
+            d.stoploss = self.sell(d, size=buysize, exectype=bt.Order.StopTrail, trailamount=stoploss_diff)
 
 class OverMATest(bt.Strategy):
   params = (
@@ -269,7 +215,7 @@ class OverMATest(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" SELL EXECUTED P/L: $"+str(order.executed.pnl)) 
 
   def next(self):
-    atrporder = sorted(self.datas, key=lambda stock: stock.atrp, reverse=True)
+    atrporder = sorted(self.datas, key=lambda stock: stock.atrp)
 
     # see if we want to sell
     for d in self.datas:
@@ -292,8 +238,8 @@ class OverMATest(bt.Strategy):
 
       buysize = int(risk / stoploss_diff)
       # position can't be larger than 10% of our account
-      if d*buysize > 0.1*self.broker.get_value():
-        buysize = int(0.1*self.broker.get_value()/d)
+      # if d*buysize > 0.1*self.broker.get_value():
+      #   buysize = int(0.1*self.broker.get_value()/d)
       # we can't spend more than all our money
       if available_cash/d < buysize:
         if available_cash > d:
