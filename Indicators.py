@@ -162,3 +162,59 @@ class ZackAverageVelocity(bt.Indicator):
     def __init__(self):
         vel = self.data(0) - self.data(-1)
         self.lines.vel = btind.SumN(vel/self.p.period, period=self.p.period)
+
+class RexOscillator(bt.Indicator):
+    lines = ('rex', 'signal')
+    params = (
+        ('period', 14),
+        ('signalPeriod', 14),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        tvb = 3*self.data.close - (self.data.low+self.data.open+self.data.high)
+        self.lines.rex = self.p.movav(tvb, period=self.p.period)
+        self.lines.signal = self.p.movav(self.lines.rex, period=self.p.signalPeriod)
+
+class AbsoluteStrengthOscillator(bt.Indicator):
+    lines = ('bulls', 'bears')
+    params = (
+        ('lookback', 6),
+        ('period', 2),
+        ('smoothPeriod', 9),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        smallest = btind.Lowest(self.data, period=self.p.lookback)
+        largest = btind.Highest(self.data, period=self.p.lookback)
+        bulls = self.data(0) - smallest
+        bears = largest - self.data(0)
+
+        avgBulls = self.p.movav(bulls, period=self.p.period)
+        avgBears = self.p.movav(bears, period=self.p.period)
+
+        self.lines.bulls = self.p.movav(avgBulls, period=self.p.smoothPeriod)
+        self.lines.bears = self.p.movav(avgBears, period=self.p.smoothPeriod)
+
+class SchaffTrend(bt.Indicator):
+    lines = ('trend',)
+    params = (
+        ('fastPeriod', 23),
+        ('slowPeriod', 50),
+        ('kPeriod', 10),
+        ('dPeriod', 3),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        macd = self.p.movav(self.data, period=self.p.fastPeriod) - self.p.movav(self.data, period=self.p.slowPeriod)
+        high = btind.Highest(self.data, period=self.p.kPeriod)
+        low = btind.Lowest(self.data, period=self.p.kPeriod)
+        fastk1= btind.If(high-low > 0, (self.data(0)-low) / (high-low) * 100, 0)
+        fastd1 = self.p.movav(fastk1, period=self.p.dPeriod)
+
+        high2 = btind.Highest(fastd1, period=self.p.kPeriod)
+        low2 = btind.Lowest(fastd1, period=self.p.kPeriod)
+        fastk2 = btind.If(high2-low2 > 0, (fastd1(0)-low2) / (high2-low2) * 100, 0)
+        self.lines.trend = self.p.movav(fastk2, period=self.p.dPeriod)

@@ -5,7 +5,7 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [TestStrategy, TestStrategy2, BuyAndHoldAll]
+strategies = [LongShort, LongShort2, BuyAndHoldAll]
 
 # pre-pick stocks
 dir = 'stocks/2016'

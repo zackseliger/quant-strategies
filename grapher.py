@@ -10,7 +10,7 @@ if __name__ == "__main__":
 	cerebro.addstrategy(TestStrategy2, recordstats=True)
 
 	# get stocks
-	dirs = ['stocks/2011etf']
+	dirs = ['stocks/growth2018']
 	files = []
 	for dir in dirs:
 		filenames = listdir(dir)

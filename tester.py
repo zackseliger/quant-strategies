@@ -5,8 +5,8 @@ import backtrader.indicators as btind
 from strategies import *
 
 cerebro = bt.Cerebro()
-cerebro.addstrategy(TestStrategy2)
-# cerebro.addindicator(ZackAverageVelocity, period=21)
+cerebro.addstrategy(LongShort2)
+# cerebro.addindicator(SchaffTrend)
 
 cerebro.adddata(btfeeds.GenericCSVData(
 	dataname='stocks/2016/BAC.csv',

@@ -5,3 +5,4 @@ from .momentum import *
 from .buyandhold import *
 from .test import *
 from .ma_crossover import *
+from .system1 import *
