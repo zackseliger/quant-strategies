@@ -7,11 +7,23 @@ class SentimentZoneOscillator(bt.Indicator):
     params = (('length',14),)
 
     def __init__(self):
-        # price = getattr(self.data, self.params.price)
         price_diff = self.data - self.data(-1)
         sign = (price_diff>0)*2-1
         sign = 100 * sign/self.params.length
         self.lines.szo = btind.TripleExponentialMovingAverage(sign, period=self.params.length)
+
+class VolumeMovingAverage(bt.Indicator):
+    lines = ('movav',)
+    params = (('period', 21),)
+
+    plotinfo = dict(
+        subplot=False
+    )
+
+    def __init__(self):
+        price = (self.data.close+self.data.high+self.data.low) / 3
+        vol_sum = btind.SumN(self.data.volume, period=self.p.period)
+        self.lines.movav = btind.SumN(price*self.data.volume, period=self.p.period) / vol_sum
 
 class VolSZO(bt.Indicator):
     lines = ('szo', 'buy', 'sell',)
@@ -75,6 +87,23 @@ class ZackOverMA(bt.Indicator):
         under = btind.SumN(self.data < ma, period=self.p.sumlength)
 
         self.lines.momentum = (over - under) / self.p.sumlength
+        self.lines.slope = self.lines.momentum(0) - self.lines.momentum(-1)
+        self.lines.zero = bt.LineNum(0)
+
+class ZackOverMA2(bt.Indicator):
+    lines = ('momentum', 'slope','zero')
+    params = (
+        ('avglength', 21),
+        ('sumlength', 20),
+        ('movav', btind.MovAv.Simple)
+    )
+
+    def __init__(self):
+        ma = self.p.movav(self.data, period=self.p.avglength)
+        over = btind.SumN(self.data > ma, period=self.p.sumlength)
+        under = btind.SumN(self.data < ma, period=self.p.sumlength)
+
+        self.lines.momentum = btind.SumN((self.data - ma) / self.data, period=self.p.sumlength)
         self.lines.slope = self.lines.momentum(0) - self.lines.momentum(-1)
         self.lines.zero = bt.LineNum(0)
 
@@ -188,8 +217,8 @@ class AbsoluteStrengthOscillator(bt.Indicator):
     def __init__(self):
         smallest = btind.Lowest(self.data, period=self.p.lookback)
         largest = btind.Highest(self.data, period=self.p.lookback)
-        bulls = self.data(0) - smallest
-        bears = largest - self.data(0)
+        bulls = (self.data(0) - smallest) / self.data(0)
+        bears = (largest - self.data(0)) / self.data(0)
 
         avgBulls = self.p.movav(bulls, period=self.p.period)
         avgBears = self.p.movav(bears, period=self.p.period)
@@ -218,3 +247,100 @@ class SchaffTrend(bt.Indicator):
         low2 = btind.Lowest(fastd1, period=self.p.kPeriod)
         fastk2 = btind.If(high2-low2 > 0, (fastd1(0)-low2) / (high2-low2) * 100, 0)
         self.lines.trend = self.p.movav(fastk2, period=self.p.dPeriod)
+
+class VolumeWeightedAveragePrice(bt.Indicator):
+    plotinfo = dict(subplot=False)
+    params = (('period', 30), )
+
+    alias = ('VWAP', 'VolumeWeightedAveragePrice',)
+    lines = ('VWAP',)
+    plotlines = dict(VWAP=dict(alpha=0.50, linestyle='-.', linewidth=2.0))
+
+    def __init__(self):
+        # Before super to ensure mixins (right-hand side in subclassing)
+        # can see the assignment operation and operate on the line
+        cumvol = bt.ind.SumN(self.data.volume, period = self.p.period)
+        typprice = ((self.data.close + self.data.high + self.data.low)/3) * self.data.volume
+        cumtypprice = bt.ind.SumN(typprice, period=self.p.period)
+        self.lines[0] = cumtypprice / cumvol
+
+        super(VolumeWeightedAveragePrice, self).__init__()
+
+
+class VolatilitySwitch(bt.Indicator):
+    lines = ('switch', 'vol')
+    params = (
+        ('period', 21),
+    )
+
+    def __init__(self):
+        dailyReturn = (self.data(0)-self.data(-1)) / ((self.data(0)+self.data(-1)) / 2)
+        self.lines.vol = btind.StandardDeviation(dailyReturn, period=self.p.period)
+
+    def next(self):
+        res = 0
+        for i in range(self.p.period):
+            if self.lines.vol[0] >= self.lines.vol[-i]:
+                res += 1
+
+        self.lines.switch[0] = res / self.p.period
+
+class VolatilitySwitchMod(bt.Indicator):
+    lines = ('switch', 'vol')
+    params = (
+        ('period', 21),
+        ('dailyperiod', 10),
+        ('movav', btind.MovAv.Smoothed)
+    )
+
+    def __init__(self):
+        dailyReturn = (self.data(0)-self.data(-1)) / ((self.data(0)+self.data(-1)) / 2)
+        ma = self.p.movav(dailyReturn, period=self.p.dailyperiod)
+        self.lines.vol = btind.StandardDeviation(ma, period=self.p.period)
+
+    def next(self):
+        res = 0
+        for i in range(self.p.period):
+            if self.lines.vol[0] >= self.lines.vol[-i]:
+                res += 1
+
+        self.lines.switch[0] = res / self.p.period
+
+class PercentChange(bt.Indicator):
+    lines = ('change',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        self.lines.change = 100 * (self.data(0) / self.data(-self.p.period) - 1)
+
+class ChaikinVolatility(bt.Indicator):
+    lines = ('cv',)
+    params = (
+        ('rocperiod', 10),
+        ('period', 10)
+    )
+
+    def __init__(self):
+        diff = self.data.high(0) - self.data.low(0)
+        avg = btind.MovingAverageSimple(diff, period=self.p.period)
+
+        self.lines.cv = btind.If(avg(-self.p.rocperiod) == 0, 100, (avg(0) - avg(-self.p.rocperiod)) / avg(-self.p.rocperiod) * 100)
+
+class HeikenAshiDiff(bt.Indicator):
+    lines = ('diff','ha_open','ha_close')
+    params = (
+        ('period', 5),
+    )
+    _nextforce = True
+
+    def __init__(self):
+        self.l.ha_close = ha_close = (self.data.open + self.data.close + self.data.high + self.data.low) / 4.0
+        self.l.ha_open = ha_open = (self.l.ha_open(-1) + ha_close(-1)) / 2.0
+        diff = ha_close(0) - ha_open(0)
+        self.lines.diff = btind.MovingAverageSimple(diff, period=5)
+
+    def prenext(self):
+        # seed recursive value
+        self.lines.ha_open[0] = (self.data.open[0] + self.data.close[0]) / 2.0

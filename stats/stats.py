@@ -52,3 +52,9 @@ class Statistics:
 				f.write(str(point[key])+",")
 			f.write("\n")
 		f.close()
+
+class Financials:
+	def __init__(self, filename):
+		# TODO
+		self.f = open(filename, "r")
+		self.close()

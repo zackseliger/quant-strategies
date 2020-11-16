@@ -6,3 +6,4 @@ from .buyandhold import *
 from .test import *
 from .ma_crossover import *
 from .system1 import *
+from .system2 import *

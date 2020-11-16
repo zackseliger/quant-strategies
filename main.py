@@ -5,7 +5,7 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [LongShort, LongShort2, BuyAndHoldAll]
+strategies = [AbsStrengthLongShort, AbsStrengthLongShort2, System2, BuyAndHoldAll]
 
 # pre-pick stocks
 dir = 'stocks/2016'
@@ -39,6 +39,19 @@ for strat in strategies:
             close=4,
             volume=6
         ))
+
+    # cerebro.adddata(btfeeds.GenericCSVData(
+    #         dataname='stocks/2016/SPY.csv',
+    #         dtformat=('%Y-%m-%d'),
+
+    #         datetime=0,
+    #         open=1,
+    #         high=2,
+    #         low=3,
+    #         close=4,
+    #         volume=6,
+    #         name='SPY'
+    #     ))
 
     # run stretegy and get stats
     results = cerebro.run()[0]
