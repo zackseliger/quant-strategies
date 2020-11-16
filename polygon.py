@@ -1,6 +1,3 @@
-# API key: Zv0PSmsYjl_ocMKuWvqGHmlU_ynqSZDIBH8GLx
-# name: serene_lalande
-
 import requests
 import json
 
