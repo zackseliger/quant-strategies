@@ -3,7 +3,7 @@ import backtrader.indicators as btind
 from Indicators import *
 from stats.stats import Statistics
 
-class System2(bt.Strategy):
+class System3(bt.Strategy):
   params = (
       ('log', False),
   )
@@ -16,12 +16,12 @@ class System2(bt.Strategy):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
       d.aroon = btind.AroonUpDown(d, period=25)
-      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.mfi = MoneyFlowIndex(d, period=14)
       d.volswitch = VolatilitySwitch(d, period=21)
+      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
 
       if self.p.log:
-        self.logfile = open('system2.txt', 'w')
+        self.logfile = open('system3.txt', 'w')
 
   def notify_order(self, order):
     if order.status in [order.Completed]:
@@ -32,13 +32,14 @@ class System2(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.volswitch, reverse=True)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0:
-        if d.strength.bears > d.strength.bulls or (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
+        # exit indicator
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -56,17 +57,17 @@ class System2(bt.Strategy):
       if available_cash/d < buysize:
         continue
 
-      # we want volatility
-      if d.volswitch < 0.5:
+      # we want a close-to-neutral RSI
+      if (d.mfi-50)**2 > 50:
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears:
+      if d.aroon.aroonup > d.aroon.aroondown and d.strength.bears < d.strength.bears[-1]:
         self.buy(d, size=buysize)
         d.long = True
         available_cash -= d*buysize
 
-class System2Test(bt.Strategy):
+class System3Test(bt.Strategy):
   params = (
       ('log', False),
   )
@@ -78,14 +79,13 @@ class System2Test(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.aroon = btind.AroonUpDown(d, period=25)
+      d.mfi = MoneyFlowIndex(d, period=14)
       d.volswitch = VolatilitySwitch(d, period=21)
-      d.pfe = PolarizedFractalEfficiency(d)
-      d.minmax = ZackMinMax(d, period=20)
+      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
 
       if self.p.log:
-        self.logfile = open('system2test.txt', 'w')
+        self.logfile = open('system3.txt', 'w')
 
   def notify_order(self, order):
     if order.status in [order.Completed]:
@@ -96,13 +96,14 @@ class System2Test(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: stock.minmax/stock)
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.volswitch, reverse=True)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0:
-        if d.pfe < 0 or d < d.minmax.mid or (d.strength.bears > d.strength.bulls and d.strength.bears[-1] <= d.strength.bulls[-1]): # exit indicator
+        # exit indicator
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -120,12 +121,12 @@ class System2Test(bt.Strategy):
       if available_cash/d < buysize:
         continue
 
-      # we want volatility
-      if d.volswitch < 0.5:
+      # we want a close-to-neutral RSI
+      if (d.mfi-50)**2 > 50:
         continue
 
       # long signals
-      if d.pfe > 0 and d-d.minmax.mid > 0 and d-d.minmax.mid < d.atr:
+      if d.aroon.aroonup > d.aroon.aroondown and d.strength.bears < d.strength.bears[-1]:
         self.buy(d, size=buysize)
         d.long = True
         available_cash -= d*buysize

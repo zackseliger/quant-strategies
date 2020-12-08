@@ -5,10 +5,12 @@ import backtrader.indicators as btind
 from strategies import *
 
 cerebro = bt.Cerebro()
-cerebro.addstrategy(System2)
+# cerebro.addstrategy(System2)
+cerebro.addindicator(Juice)
+cerebro.addindicator(AbsoluteStrengthOscillator)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-	dataname='stocks/2016/BAC.csv',
+	dataname='stocks/2016/MSFT.csv',
 	dtformat=('%Y-%m-%d'),
 
 	datetime=0,

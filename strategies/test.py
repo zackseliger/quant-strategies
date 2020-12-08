@@ -3,6 +3,7 @@ import backtrader.indicators as btind
 import backtrader.feeds as btfeeds
 from Indicators import *
 from stats.stats import Statistics
+import random
 
 class TestStrategy(bt.Strategy):
   params = (
@@ -972,66 +973,27 @@ class SPYTestStrat2(bt.Strategy):
         d.long = False
         available_cash -= d*buysize
 
-class AbsStrength(bt.Strategy):
-  def __init__(self):
-    for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-
-  def next(self):
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.volume/stock.volma)
-    orderedstocks = self.datas
-    available_cash = self.broker.get_cash()
-
-    # close positions
-    for d in self.datas:
-      if self.getposition(d).size > 0: # manage longs
-        if d.strength.bears > d.strength.bulls: # exit indicator
-          self.close(d, size=self.getposition(d).size)
-          available_cash += d*self.getposition(d).size
-
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size != 0:
-        continue
-
-      # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*3
-      buysize = int(risk / stoploss_diff)
-
-      # we can't spend more than all our money
-      if available_cash/d < buysize:
-        continue
-
-      # long signals
-      if d.strength.bulls > d.strength.bears:
-        self.buy(d, size=buysize)
-        available_cash -= d*buysize
-
 class AbsStrengthLongShort(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
       d.volswitch = VolatilitySwitch(d, period=21)
+      d.minmax = ZackMinMax(d, period=20)
+      d.pfe = PolarizedFractalEfficiency(d)
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock)
-    # orderedstocks = self.datas
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.minmax/stock)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0: # manage longs
-        if d.strength.bears > d.strength.bulls or (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
+        if d.pfe < 0 or (d.strength.bears > d.strength.bulls and d.strength.bears[-1] <= d.strength.bulls[-1]): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
       if self.getposition(d).size < 0: # manage shorts
-        if d.strength.bulls > d.strength.bears or (d.aroon.aroonup > 70 and d.aroon.aroonup-d.aroon.aroonup[-1] > 0): # exit indicator
+        if d.pfe < 0 or (d.strength.bulls > d.strength.bears and d.strength.bulls[-1] <= d.strength.bears[-1]): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -1054,13 +1016,13 @@ class AbsStrengthLongShort(bt.Strategy):
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears and d.aroon.aroonup > d.aroon.aroondown:
+      if d.pfe > 0 and d-d.minmax.mid > 0 and d-d.minmax.mid < d.atr:
         self.buy(d, size=buysize)
         d.long = True
         available_cash -= d*buysize
 
       # short signals
-      if d.strength.bears > d.strength.bulls and d.aroon.aroondown > d.aroon.aroonup:
+      if d.pfe < 0 and d-d.minmax.mid < 0 and d.minmax.mid-d < d.atr:
         self.sell(d, size=buysize)
         d.long = False
         available_cash -= d*buysize
@@ -1069,25 +1031,23 @@ class AbsStrengthLongShort2(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
       d.volswitch = VolatilitySwitch(d, period=21)
+      d.minmax = ZackMinMax(d, period=20)
+      d.pfe = PolarizedFractalEfficiency(d)
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock)
-    # orderedstocks = self.datas
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.minmax/stock)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0: # manage longs
-        if d.strength.bears > d.strength.bulls or (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
+        if d.pfe < 0 or (d.strength.bears > d.strength.bulls and d.strength.bears[-1] <= d.strength.bulls[-1]): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
       if self.getposition(d).size < 0: # manage shorts
-        if d.strength.bulls > d.strength.bears or (d.aroon.aroonup > 70 and d.aroon.aroonup-d.aroon.aroonup[-1] > 0): # exit indicator
+        if d.pfe < 0 or (d.strength.bulls > d.strength.bears and d.strength.bulls[-1] <= d.strength.bears[-1]): # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -1110,13 +1070,179 @@ class AbsStrengthLongShort2(bt.Strategy):
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears and d.aroon.aroonup > d.aroon.aroondown:
+      if d.pfe > 0 and d-d.minmax.mid > 0 and d-d.minmax.mid < d.atr:
         self.buy(d, size=buysize)
         d.long = True
         available_cash -= d*buysize
 
       # short signals
-      if d.strength.bears > d.strength.bulls and d.aroon.aroondown > d.aroon.aroonup:
+      if d.pfe < 0 and d-d.minmax.mid < 0 and d.minmax.mid-d < d.atr:
+        self.sell(d, size=buysize)
+        d.long = False
+        available_cash -= d*buysize
+
+class PFELongShort(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.aroon = btind.AroonUpDown(d, period=25)
+      d.pfe = PolarizedFractalEfficiency(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.volswitch = VolatilitySwitch(d, period=21)
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.pfe < 0 or (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+      if self.getposition(d).size < 0: # manage shorts
+        if d.pfe > 0 or (d.aroon.aroonup > 70 and d.aroon.aroonup-d.aroon.aroonup[-1] > 0): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # we want volatility
+      if d.volswitch < 0.5:
+        continue
+
+      # long signals
+      if d.pfe > 0:
+        self.buy(d, size=buysize)
+        d.long = True
+        available_cash -= d*buysize
+
+      # short signals
+      if d.pfe < 0:
+        self.sell(d, size=buysize)
+        d.long = False
+        available_cash -= d*buysize
+
+class PFELongShort2(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.aroon = btind.AroonUpDown(d, period=25)
+      d.pfe = PolarizedFractalEfficiency(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.volswitch = VolatilitySwitch(d, period=21)
+      d.minmax = ZackMinMax(d, period=20)
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.pfe < 0 or (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+      if self.getposition(d).size < 0: # manage shorts
+        if d.pfe > 0 or (d.aroon.aroonup > 70 and d.aroon.aroonup-d.aroon.aroonup[-1] > 0): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # we want volatility
+      if d.volswitch < 0.5:
+        continue
+
+      # long signals
+      if d.pfe > 0 and d > d.minmax.mid:
+        self.buy(d, size=buysize)
+        d.long = True
+        available_cash -= d*buysize
+
+      # short signals
+      if d.pfe < 0 and d < d.minmax.mid:
+        self.sell(d, size=buysize)
+        d.long = False
+        available_cash -= d*buysize
+
+class DMILongShort(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      dmi = btind.DirectionalMovementIndex(d, period=10)
+      d.dmi = dmi.plusDI - dmi.minusDI
+      d.extreme = DMIStoch(d, period=10, sumperiod=5)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.volswitch = VolatilitySwitch(d, period=21)
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    # orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock)
+    # orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.dmi < 0: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+      if self.getposition(d).size < 0: # manage shorts
+        if d.dmi > 0: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # we want volatility
+      if d.volswitch < 0.5:
+        continue
+
+      # long signals
+      if d.extreme[-1] < 30 and d.extreme >= 30 and d.dmi > 0:
+        self.buy(d, size=buysize)
+        d.long = True
+        available_cash -= d*buysize
+
+      # short signals
+      if d.extreme[-1] > 70 and d.extreme <= 70 and d.dmi < 0:
         self.sell(d, size=buysize)
         d.long = False
         available_cash -= d*buysize

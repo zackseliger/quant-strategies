@@ -122,17 +122,27 @@ class ZackVolumeSignal(bt.Indicator):
         self.lines.up = self.p.movav(priceUp, period=self.p.period)
         self.lines.down = self.p.movav(priceDown, period=self.p.period)
 
-class ZackPrevHigh(bt.Indicator):
-    lines = ('top', 'bot', 'midway')
+class ZackMinMax(bt.Indicator):
+    lines = ('top', 'bot', 'mid')
     params = (
-        ('period', 50),
+        ('period', 20),
     )
     plotinfo=dict(subplot=False)
 
     def __init__(self):
-        self.lines.top = btind.Highest(self.data, period=self.p.period)
-        self.lines.bot = btind.Lowest(self.data, period=self.p.period)
-        self.lines.midway = (self.lines.top(0) + self.lines.bot(0)) / 2
+        self.lines.top = btind.Highest(self.data.high, period=self.p.period)
+        self.lines.bot = btind.Lowest(self.data.low, period=self.p.period)
+        self.lines.mid = (self.lines.top(0) + self.lines.bot(0)) / 2
+
+class MinMaxPercentage(bt.Indicator):
+    lines = ('percent',)
+    params = (
+        ('period', 20),
+    )
+
+    def __init__(self):
+        minmax = ZackMinMax(self.data, period=self.p.period)
+        self.lines.percent = (self.data - minmax.bot) / (minmax.top - minmax.bot) * 100
 
 class AboveMAAccum(bt.Indicator):
     lines = ('accum', 'slope')
@@ -153,22 +163,23 @@ class BHErgodic(bt.Indicator):
         ('rPeriod', 2),
         ('sPeriod', 10),
         ('uPeriod', 5),
-        ('triggerPeriod', 3)
+        ('triggerPeriod', 3),
+        ('movav', btind.MovAv.Exponential)
     )
 
     def __init__(self):
         delta = self.data-self.data(-1)
         delta2 = abs(self.data-self.data(-1))
 
-        rma = btind.ExponentialMovingAverage(delta, period=self.p.rPeriod)
-        rma2 = btind.ExponentialMovingAverage(delta2, period=self.p.rPeriod)
-        sma = btind.ExponentialMovingAverage(rma, period=self.p.sPeriod)
-        sma2 = btind.ExponentialMovingAverage(rma2, period=self.p.sPeriod)
-        uma = btind.ExponentialMovingAverage(sma, period=self.p.uPeriod)
-        uma2 = btind.ExponentialMovingAverage(sma2, period=self.p.uPeriod)
+        rma = self.p.movav(delta, period=self.p.rPeriod)
+        rma2 = self.p.movav(delta2, period=self.p.rPeriod)
+        sma = self.p.movav(rma, period=self.p.sPeriod)
+        sma2 = self.p.movav(rma2, period=self.p.sPeriod)
+        uma = self.p.movav(sma, period=self.p.uPeriod)
+        uma2 = self.p.movav(sma2, period=self.p.uPeriod)
 
         self.lines.erg = btind.If(uma2 > 0, 100*uma / uma2, 0)
-        self.lines.signal = btind.ExponentialMovingAverage(self.lines.erg, period=self.p.triggerPeriod)
+        self.lines.signal = self.p.movav(self.lines.erg, period=self.p.triggerPeriod)
 
 class ZackMADiff(bt.Indicator):
     lines = ('res',)
@@ -216,9 +227,9 @@ class AbsoluteStrengthOscillator(bt.Indicator):
 
     def __init__(self):
         smallest = btind.Lowest(self.data, period=self.p.lookback)
-        largest = btind.Highest(self.data, period=self.p.lookback)
+        highest = btind.Highest(self.data, period=self.p.lookback)
         bulls = (self.data(0) - smallest) / self.data(0)
-        bears = (largest - self.data(0)) / self.data(0)
+        bears = (highest - self.data(0)) / self.data(0)
 
         avgBulls = self.p.movav(bulls, period=self.p.period)
         avgBears = self.p.movav(bears, period=self.p.period)
@@ -247,6 +258,18 @@ class SchaffTrend(bt.Indicator):
         low2 = btind.Lowest(fastd1, period=self.p.kPeriod)
         fastk2 = btind.If(high2-low2 > 0, (fastd1(0)-low2) / (high2-low2) * 100, 0)
         self.lines.trend = self.p.movav(fastk2, period=self.p.dPeriod)
+
+class Effort(bt.Indicator):
+    lines = ('effort',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        price = btind.MovingAverageSimple(self.data, period=self.p.period)
+        roc = 100 * (price(0) / price(-self.p.period)-1)
+        maxvol = btind.Highest(self.data.volume, period=self.p.period)
+        self.lines.effort = roc / maxvol
 
 class VolumeWeightedAveragePrice(bt.Indicator):
     plotinfo = dict(subplot=False)
@@ -344,3 +367,76 @@ class HeikenAshiDiff(bt.Indicator):
     def prenext(self):
         # seed recursive value
         self.lines.ha_open[0] = (self.data.open[0] + self.data.close[0]) / 2.0
+
+class DMIStoch(bt.Indicator):
+    lines = ('stoch',)
+    params = (
+        ('period', 10),
+        ('sumperiod', 3)
+    )
+
+    def __init__(self):
+        dmi = btind.DirectionalMovementIndex(self.data, period=self.p.period)
+        osc = dmi.plusDI - dmi.minusDI
+        hh = btind.Highest(osc, period=self.p.sumperiod)
+        ll = btind.Lowest(osc, period=self.p.sumperiod)
+
+        self.lines.stoch = btind.SumN(osc - ll, period=self.p.sumperiod) / btind.SumN(hh - ll, period=self.p.sumperiod) * 100
+
+class ZackVolatility(bt.Indicator):
+    lines = ('vol', 'ma')
+    params = (
+        ('period', 21),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        self.lines.vol = btind.StandardDeviation(self.data, period=self.p.period)
+        self.lines.ma = self.p.movav(self.lines.vol, period=self.p.period*2)
+
+class MoneyFlowIndex(bt.Indicator):
+    lines = ('mfi',)
+    params = (
+        ('period', 14),
+        ('movav', btind.MovAv.Smoothed)
+    )
+
+    def __init__(self):
+        price = (self.data.high + self.data.low + self.data.close) / 3
+        pricema = self.p.movav(price, period=self.p.period)
+        posmf = btind.If(price(0) > price(-1), price*self.data.volume, 0)
+        negmf = btind.If(price(0) < price(-1), price*self.data.volume, 0)
+        mfi = bt.DivByZero(btind.SumN(posmf, period=self.p.period), btind.SumN(negmf, period=self.p.period))
+        self.lines.mfi = 100 - 100 / (1 + mfi)
+
+class PolarizedFractalEfficiency(bt.Indicator):
+    lines = ('pfe',)
+    params = (
+        ('slowPeriod', 10),
+        ('fastPeriod', 1),
+        ('scaleFactor', 1),
+        ('period', 5),
+        ('movav', btind.MovAv.Smoothed)
+    )
+
+    def __init__(self):
+        longRoc = 100 * (self.data(0) / self.data(-self.p.slowPeriod)-1)
+        shortRoc = 100 * (self.data(0) / self.data(-self.p.fastPeriod)-1)
+        Z = btind.DivByZero(pow(longRoc(0) * longRoc(0) + 100, 0.5), pow(shortRoc(0) * shortRoc(0), 0.5) + self.p.scaleFactor)
+        B = btind.If(self.data(0) > self.data(-self.p.slowPeriod), 100*Z(0), -100*Z(0))
+        self.lines.pfe = self.p.movav(B, period=self.p.period)
+
+class Juice(bt.Indicator):
+    lines = ('juice',)
+    params = (
+        ('fastPeriod', 6),
+        ('slowPeriod', 14),
+        ('period', 5),
+        ('movav', btind.MovAv.Smoothed),
+        ('volatility', 0.02)
+    )
+
+    def __init__(self):
+        val = (self.p.movav(self.data, period=self.p.fastPeriod) - self.p.movav(self.data, period=self.p.slowPeriod)) / self.data(0)
+        avg = self.p.movav(val, period=self.p.period)
+        self.lines.juice = abs(avg) - self.p.volatility
