@@ -10,7 +10,7 @@ cerebro.addindicator(Juice)
 cerebro.addindicator(AbsoluteStrengthOscillator)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-	dataname='stocks/2016/MSFT.csv',
+	dataname='stocks/2000/BRCM.csv',
 	dtformat=('%Y-%m-%d'),
 
 	datetime=0,

@@ -5,17 +5,16 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [System2, System2Test, BuyAndHoldAll]
+strategies = [System2, System2Test, System2Test2, BuyAndHoldAll]
 
 # pre-pick stocks
-dir = 'stocks/2016'
+dir = 'stocks/2000'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.05:
+    if random() < 0.5:
         stocks.append(filename)
-# stocks = ['DIA.csv', 'DIA.csv', 'DIA.csv', 'DIA.csv', 'DIA.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv', 'SPY.csv']
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 for strat in strategies:
