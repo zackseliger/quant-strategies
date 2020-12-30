@@ -294,10 +294,12 @@ class VolatilitySwitch(bt.Indicator):
     lines = ('switch', 'vol')
     params = (
         ('period', 21),
+        ('smoothPeriod', 2)
     )
 
     def __init__(self):
-        dailyReturn = (self.data(0)-self.data(-1)) / ((self.data(0)+self.data(-1)) / 2)
+        smoothFactor = btind.MovingAverageSimple(self.data, period=self.p.smoothPeriod)
+        dailyReturn = (self.data(0)-self.data(-1)) / smoothFactor
         self.lines.vol = btind.StandardDeviation(dailyReturn, period=self.p.period)
 
     def next(self):
@@ -440,3 +442,16 @@ class Juice(bt.Indicator):
         val = (self.p.movav(self.data, period=self.p.fastPeriod) - self.p.movav(self.data, period=self.p.slowPeriod)) / self.data(0)
         avg = self.p.movav(val, period=self.p.period)
         self.lines.juice = abs(avg) - self.p.volatility
+
+class VolumeOsc(bt.Indicator):
+    lines = ('osc',)
+    params = (
+        ('fastPeriod', 14),
+        ('slowPeriod', 28),
+        ('movav', btind.MovAv.Simple),
+    )
+
+    def __init__(self):
+        fast = self.p.movav(self.data.volume, period=self.p.fastPeriod)
+        slow = self.p.movav(self.data.volume, period=self.p.slowPeriod)
+        self.lines.osc = (fast - slow) / slow

@@ -6,11 +6,11 @@ from strategies import *
 
 cerebro = bt.Cerebro()
 # cerebro.addstrategy(System2)
-cerebro.addindicator(Juice)
-cerebro.addindicator(AbsoluteStrengthOscillator)
+# cerebro.addindicator(Juice)
+# cerebro.addindicator(AbsoluteStrengthOscillator)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-	dataname='stocks/2000/BRCM.csv',
+	dataname='stocks/2019/TTD.csv',
 	dtformat=('%Y-%m-%d'),
 
 	datetime=0,

@@ -18,8 +18,7 @@ class System2(bt.Strategy):
       d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
       d.volsig = ZackVolumeSignal(d)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
-      d.volswitch = VolatilitySwitch(d, period=21)
+      d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
 
       if self.p.log:
         self.logfile = open('system2.txt', 'w')
@@ -33,19 +32,20 @@ class System2(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0:
-        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]): # exit indicator
+        # exit conditions
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]):
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
     # open positions
     for d in orderedstocks:
-      if self.getposition(d).size != 0:
+      if self.getposition(d).size > 0:
         continue
 
       # useful numbers
@@ -58,13 +58,12 @@ class System2(bt.Strategy):
         continue
 
       # we want volatility
-      if d.volswitch < 0.5:
+      if d.volOsc > 0:
         continue
 
       # long signals
       if d.volsig.up > d.volsig.down or d.strength.bulls > d.strength.bears:
         self.buy(d, size=buysize)
-        d.long = True
         available_cash -= d*buysize
 
 class System2Test(bt.Strategy):
@@ -82,8 +81,7 @@ class System2Test(bt.Strategy):
       d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
       d.volsig = ZackVolumeSignal(d)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
-      d.volswitch = VolatilitySwitch(d, period=21)
+      d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
 
       if self.p.log:
         self.logfile = open('system2test.txt', 'w')
@@ -97,19 +95,20 @@ class System2Test(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
     available_cash = self.broker.get_cash()
 
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0:
-        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]): # exit indicator
+        # exit conditions
+        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]):
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
     # open positions
     for d in orderedstocks:
-      if self.getposition(d).size != 0:
+      if self.getposition(d).size > 0:
         continue
 
       # useful numbers
@@ -122,13 +121,12 @@ class System2Test(bt.Strategy):
         continue
 
       # we want volatility
-      if d.volswitch < 0.5:
+      if d.volOsc > 0:
         continue
 
       # long signals
       if d.volsig.up > d.volsig.down or d.strength.bulls > d.strength.bears:
         self.buy(d, size=buysize)
-        d.long = True
         available_cash -= d*buysize
 
 class System2Test2(bt.Strategy):
