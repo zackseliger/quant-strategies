@@ -1107,9 +1107,6 @@ class PFELongShort(bt.Strategy):
 
     # open positions
     for d in orderedstocks:
-      if self.getposition(d).size != 0:
-        continue
-
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3

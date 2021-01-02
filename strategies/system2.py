@@ -39,7 +39,9 @@ class System2(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit conditions
-        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]):
+        cond1 = (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0)
+        cond2 = (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1])
+        if cond1 or cond2:
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -102,7 +104,9 @@ class System2Test(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit conditions
-        if (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0) or (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1]):
+        cond1 = (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0)
+        cond2 = (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1])
+        if cond1 or cond2:
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 

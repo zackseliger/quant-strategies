@@ -5,12 +5,12 @@ import backtrader.indicators as btind
 from strategies import *
 
 cerebro = bt.Cerebro()
-# cerebro.addstrategy(System2)
-# cerebro.addindicator(Juice)
-# cerebro.addindicator(AbsoluteStrengthOscillator)
+cerebro.addindicator(VolatilitySwitch)
+cerebro.addindicator(VolumeOsc, fastPeriod=14, slowPeriod=21)
+cerebro.addindicator(AbsoluteStrengthOscillator)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-	dataname='stocks/2019/TTD.csv',
+	dataname='stocks/2020/TTD.csv',
 	dtformat=('%Y-%m-%d'),
 
 	datetime=0,

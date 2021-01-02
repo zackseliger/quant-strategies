@@ -8,12 +8,12 @@ from random import random, shuffle
 strategies = [System2, System2Test, BuyAndHoldAll]
 
 # pre-pick stocks
-dir = 'stocks/2016'
+dir = 'stocks/2000'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.05:
+    if random() < 0.5:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
