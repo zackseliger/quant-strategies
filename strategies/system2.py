@@ -19,6 +19,7 @@ class System2(bt.Strategy):
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
       d.volsig = ZackVolumeSignal(d)
       d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
       if self.p.log:
         self.logfile = open('system2.txt', 'w')
@@ -32,7 +33,7 @@ class System2(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
     available_cash = self.broker.get_cash()
 
     # close positions
@@ -60,7 +61,7 @@ class System2(bt.Strategy):
         continue
 
       # we want volatility
-      if d.volOsc > 0:
+      if d.volOsc > d.volOsc[-1]:
         continue
 
       # long signals
@@ -84,6 +85,7 @@ class System2Test(bt.Strategy):
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
       d.volsig = ZackVolumeSignal(d)
       d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
       if self.p.log:
         self.logfile = open('system2test.txt', 'w')
@@ -97,7 +99,7 @@ class System2Test(bt.Strategy):
         self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
 
   def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
     available_cash = self.broker.get_cash()
 
     # close positions
@@ -125,7 +127,7 @@ class System2Test(bt.Strategy):
         continue
 
       # we want volatility
-      if d.volOsc > 0:
+      if d.volOsc > d.volOsc[-1]:
         continue
 
       # long signals

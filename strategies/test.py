@@ -408,7 +408,7 @@ class AroonLongShort(bt.Strategy):
       buysize = int(self.broker.get_cash() / d / 2)
 
       # we can't spend more than all our money
-      if available_cash/d < buysize:
+      if available_cash < buysize*d:
         continue
 
       # long signals
@@ -1242,4 +1242,195 @@ class DMILongShort(bt.Strategy):
       if d.extreme[-1] > 70 and d.extreme <= 70 and d.dmi < 0:
         self.sell(d, size=buysize)
         d.long = False
+        available_cash -= d*buysize
+
+class Sys2LS(bt.Strategy):
+  params = (
+      ('log', False),
+  )
+
+  def log(self, message):
+    if self.p.log:
+      self.logfile.write(message+"\n")
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.aroon = btind.AroonUpDown(d, period=25)
+      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
+      d.volsig = ZackVolumeSignal(d)
+      d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+
+      if self.p.log:
+        self.logfile = open('sys2LS.txt', 'w')
+
+  def notify_order(self, order):
+    if order.status in [order.Completed]:
+      # logging
+      if not order.isbuy():
+        self.log(str(self.data.datetime.date(0))+" SELL "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2))+" P/L: $"+str(order.executed.pnl))
+      else:
+        self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      # manage longs
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = (d.aroon.aroondown > 70 and d.aroon.aroondown-d.aroon.aroondown[-1] > 0)
+        cond2 = (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1])
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+      # manage shorts
+      if self.getposition(d).size < 0:
+        cond1 = (d.aroon.aroonup > 70 and d.aroon.aroonup-d.aroon.aroonup[-1] > 0)
+        cond2 = (d.volsig.up > d.volsig.down and d.volsig.up[-1] <= d.volsig.down[-1])
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # we want volatility
+      if d.volOsc > 0:
+        continue
+
+      # long signals
+      if d.volsig.up > d.volsig.down and d.strength.bulls > d.strength.bears:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+      # short signals
+      if d.volsig.down > d.volsig.up and d.strength.bears > d.strength.bulls:
+        self.sell(d, size=buysize)
+        available_cash -= d*buysize
+
+class Momentum(bt.Strategy):
+  params = (
+    ('positions', 10),
+  )
+
+  def __init__(self):
+    self.rebalanced = False
+
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.sma = btind.MovingAverageSimple(d, period=200)
+      d.roc = btind.RateOfChange100(d, period=200)
+      d.rsi = btind.RelativeStrengthIndex(d, period=20)
+
+  def next(self):
+    curdate = self.datetime.date(ago=0)
+    if curdate.weekday() > 2 or self.rebalanced == True:
+      if curdate.weekday() > 2:
+        self.rebalanced = False
+      return
+    self.rebalanced = True
+
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.roc - abs(stock.rsi-50), reverse=True)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        cond1 = orderedstocks.index(d)+1 > self.p.positions
+        cond2 = d.sma < d
+        if cond1 or cond2: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+      
+      # has to be above 200 sma
+      if d < d.sma:
+        continue
+
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(self.broker.get_value() / self.p.positions / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if orderedstocks.index(d)+1 <= self.p.positions:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class Momentum2(bt.Strategy):
+  params = (
+    ('positions', 10),
+  )
+
+  def __init__(self):
+    self.rebalanced = False
+
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.sma = btind.MovingAverageSimple(d, period=200)
+      d.roc = btind.RateOfChange100(d, period=200)
+      d.rsi = btind.RelativeStrengthIndex(d, period=20)
+
+  def next(self):
+    curdate = self.datetime.date(ago=0)
+    if curdate.weekday() > 2 or self.rebalanced == True:
+      if curdate.weekday() > 2:
+        self.rebalanced = False
+      return
+    self.rebalanced = True
+
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.roc - abs(stock.rsi-50), reverse=True)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        cond1 = orderedstocks.index(d)+1 > self.p.positions
+        cond2 = d.sma < d
+        if cond1 or cond2: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+      
+      # has to be above 200 sma
+      if d < d.sma:
+        continue
+
+      # useful numbers
+      # risk = 0.02*self.broker.get_value()
+      # stoploss_diff = d.atr[0]*3
+      buysize = int(self.broker.get_value() / self.p.positions / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if orderedstocks.index(d)+1 <= self.p.positions:
+        self.buy(d, size=buysize)
         available_cash -= d*buysize

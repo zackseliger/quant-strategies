@@ -32,11 +32,15 @@ def download_stock(ticker, start_date, end_date):
 
 	f.close()
 
-stocks = ["INMD","SHOP","CASH",'ARWR','PLMR','ENPH','KL','OLED','PODD','SAFE','PAYS','IIPR','SEDG','RNG','ACIA','ARCE','TDG','STNE','PCTY','CG','INS','RGEN','PAYC','COUP','NOW','RH',
-	'CZZ','DXCM','TTD','SNBR','GSHD','SMSI','RNR','UPLD','VST','TMHC','LIN','KNSL','CPRT','GLOB','IBP','TWTR','UEIC','MEDP','CLCT','EW','BURL','ADES','PFSI','PAGS','VEEV','BLD','SNX',
-	'DOCU','IPHI','CHDN',"PLD"]
+stocks = [
+	"CTAS", "DISH", "FWLT", "HOLX", "JBHT", "LOGI", "PDCO", "CMCSA", "ILMN",
+	"AKAM", "CSCO", "TXN", "COST", "AMGN", "AZN", "SBUX", "AMD", "AMAT",
+	"INTU", "ISRG", "DLTR", "QGEN", "GILD", "LRCX", "NTES", "FISV", "ATVI",
+	"CSX", "ADP", "FFIV", "EQIX", "URBN", "ADI", "ILMN", "REGN", "VOD",
+	"MNST", "KLAC", "CSTH", "EA"
+]
 for stock in stocks:
 	print("writing "+stock)
-	download_stock(stock, "2019-12-23", "2020-12-23")
+	download_stock(stock, "2002-01-01", "2020-12-23")
 	print("wrote "+stock)
 	sleep(15)

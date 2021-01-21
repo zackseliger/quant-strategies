@@ -5,7 +5,7 @@ from strategies import *
 from os import listdir
 from random import random, shuffle
 
-strategies = [System2, System2Test, BuyAndHoldAll]
+strategies = [Momentum, Momentum2, BuyAndHoldAll]
 
 # pre-pick stocks
 dir = 'stocks/2000'
@@ -17,6 +17,7 @@ for filename in files:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
+i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strat)
@@ -39,19 +40,6 @@ for strat in strategies:
             volume=6
         ))
 
-    # cerebro.adddata(btfeeds.GenericCSVData(
-    #         dataname='stocks/2016/SPY.csv',
-    #         dtformat=('%Y-%m-%d'),
-
-    #         datetime=0,
-    #         open=1,
-    #         high=2,
-    #         low=3,
-    #         close=4,
-    #         volume=6,
-    #         name='SPY'
-    #     ))
-
     # run stretegy and get stats
     results = cerebro.run()[0]
     sharpe_ratio = results.analyzers[2].get_analysis()['sharperatio']
@@ -66,5 +54,13 @@ for strat in strategies:
         str(round(maxdrawdown,2)) + " = " +
         str(round(avg_returns/maxdrawdown,2))
     )
+
+    numDays = len(results.observers[0].value)
+    arr = results.observers[0].value.get(0,numDays)
+    f = open("thing"+str(i)+".csv", 'w')
+    for price in arr:
+        f.write("{}\n".format(price))
+    f.close()
+    i += 1
 
     # cerebro.plot()
