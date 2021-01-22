@@ -8,23 +8,25 @@ from random import random, shuffle
 strategies = [Momentum, Momentum2, BuyAndHoldAll]
 
 # pre-pick stocks
-dir = 'stocks/2000'
+dir = 'stocks/2016'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.5:
+    if random() < 0.05:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
+    cerebro.broker = bt.brokers.BackBroker(slip_perc=0.005)
     cerebro.addstrategy(strat)
 
     cerebro.addanalyzer(bt.analyzers.AnnualReturn)
     cerebro.addanalyzer(bt.analyzers.DrawDown)
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, annualize=True, riskfreerate=0.01)
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
 
     # add data
     for filename in stocks:
@@ -55,12 +57,21 @@ for strat in strategies:
         str(round(avg_returns/maxdrawdown,2))
     )
 
-    numDays = len(results.observers[0].value)
-    arr = results.observers[0].value.get(0,numDays)
-    f = open("thing"+str(i)+".csv", 'w')
-    for price in arr:
-        f.write("{}\n".format(price))
-    f.close()
-    i += 1
+    ta = results.analyzers[3].get_analysis()
+    if "won" in ta:
+        h1 = ['Total Trades', 'Total Won', 'Total Lost', 'Strike Rate', 'Average P/L', 'Overall P/L']
+        r1 = [ta.total.total, ta.won.total, ta.lost.total, round((ta.won.total/ta.total.closed)*100,2), round(ta.pnl.net.average, 2), round(ta.pnl.net.total,2)]
+        print(("{:<15}"*(len(h1)+1)).format('',*h1))
+        print(("{:<15}"*(len(h1)+1)).format('',*r1))
+    else:
+        print(("{:<15}"*2).format('',"Trade Analysis Unavailable"))
+
+    # numDays = len(results.observers[0].value)
+    # arr = results.observers[0].value.get(0,numDays)
+    # f = open("thing"+str(i)+".csv", 'w')
+    # for price in arr:
+    #     f.write("{}\n".format(price))
+    # f.close()
+    # i += 1
 
     # cerebro.plot()

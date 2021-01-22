@@ -110,13 +110,13 @@ class ZackOverMA2(bt.Indicator):
 class ZackVolumeSignal(bt.Indicator):
     lines = ('up', 'down')
     params = (
-        ('avgvollength', 12),
+        ('volperiod', 12),
         ('period', 12),
         ('movav', btind.MovAv.Exponential)
     )
 
     def __init__(self):
-        avgvol = btind.ExponentialMovingAverage(self.data.volume, period=self.p.avgvollength)
+        avgvol = btind.ExponentialMovingAverage(self.data.volume, period=self.p.volperiod)
         priceUp = btind.If(self.data.volume(0)>avgvol(0), btind.If(self.data(0)>self.data(-1), (self.data(0)-self.data(-1))/self.data(0), 0), 0)
         priceDown = btind.If(self.data.volume(0)>avgvol(0), btind.If(self.data(0)<self.data(-1), (self.data(-1)-self.data(0))/self.data(0), 0), 0)
         self.lines.up = self.p.movav(priceUp, period=self.p.period)

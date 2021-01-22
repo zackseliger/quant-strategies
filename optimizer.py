@@ -7,8 +7,8 @@ from random import random, shuffle
 
 if __name__ == "__main__":
 	# setup strategy
-	strategy = TestStrategy
-	cerebro = bt.Cerebro()
+	strategy = Momentum
+	cerebro = bt.Cerebro(optreturn=False, stdstats=False)
 	cerebro.optstrategy(strategy, test=range(5,35,5))
 
 	# get stocks
@@ -21,7 +21,6 @@ if __name__ == "__main__":
 					dataname=dir+'/'+filename,
 					dtformat=('%Y-%m-%d'),
 
-					openinterest=-1,
 					datetime=0,
 					open=1,
 					high=2,
@@ -36,22 +35,20 @@ if __name__ == "__main__":
 	cerebro.broker.setcommission(commission=0.0) 
 	opt_runs = cerebro.run()
 	# get results (this doesn't work bc of a bug in backtester)
-	# final_results_list = []
-	# for run in opt_runs:
-	# 	for strategy in run:
-	# 		print(strategy.broker)
-		# 	print(strategy.analyzers[0])
-		# 	value = strategy.broker.get_value()
-		# 	pnl = round(value - start_cash, 2)
-		# 	period = strategy.params.pivotlength
-		# 	final_results_list.append([period,pnl])
+	final_results_list = []
+	for run in opt_runs:
+		for strategy in run:
+			value = strategy.broker.get_value()
+			pnl = round(value - start_cash, 2)
+			period = strategy.params.test
+			final_results_list.append([period,pnl])
 	# Sort Results List
-	# by_period = sorted(final_results_list, key=lambda x: x[0])
-	# by_pnl = sorted(final_results_list, key=lambda x: x[1], reverse=True)
-	# # print results in order
-	# print("Results ordered by period")
-	# for period_data in by_period:
-	# 	print(str(period_data[0]) + ": " + str(period_data[1]))
-	# print("Results ordered by pnl")
-	# for pnl_data in by_pnl:
-	# 	print(str(pnl_data[0]) + ": " + str(period_data[1]))
+	by_period = sorted(final_results_list, key=lambda x: x[0])
+	by_pnl = sorted(final_results_list, key=lambda x: x[1], reverse=True)
+	# print results in order
+	print("Results ordered by period")
+	for period_data in by_period:
+		print(str(period_data[0]) + ": " + str(period_data[1]))
+	print("Results ordered by pnl")
+	for pnl_data in by_pnl:
+		print(str(pnl_data[0]) + ": " + str(pnl_data[1]))

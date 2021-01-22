@@ -5,7 +5,7 @@ import backtrader.indicators as btind
 from strategies import *
 
 cerebro = bt.Cerebro()
-cerebro.addindicator(VolatilitySwitch)
+cerebro.addindicator(ZackVolatility)
 cerebro.addindicator(VolumeOsc, fastPeriod=14, slowPeriod=21)
 cerebro.addindicator(AbsoluteStrengthOscillator)
 

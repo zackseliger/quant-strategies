@@ -1332,7 +1332,7 @@ class Momentum(bt.Strategy):
     self.rebalanced = False
 
     for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
+      d.atr = btind.AverageTrueRange(d, period=20)
       d.sma = btind.MovingAverageSimple(d, period=200)
       d.roc = btind.RateOfChange100(d, period=200)
       d.rsi = btind.RelativeStrengthIndex(d, period=20)
@@ -1345,39 +1345,31 @@ class Momentum(bt.Strategy):
       return
     self.rebalanced = True
 
-    orderedstocks = sorted(self.datas, key=lambda stock: stock.roc - abs(stock.rsi-50), reverse=True)
-    available_cash = self.broker.get_cash()
+    rank = self.getrank
+    orderedstocks = sorted(self.datas, key=lambda stock: rank(stock), reverse=True)
 
-    # close positions
+    # rebalance
     for d in self.datas:
-      if self.getposition(d).size > 0:
-        cond1 = orderedstocks.index(d)+1 > self.p.positions
-        cond2 = d.sma < d
-        if cond1 or cond2: # exit indicator
-          self.close(d, size=self.getposition(d).size)
+      # sell stocks
+      condSell1 = orderedstocks.index(d)+1 > self.p.positions
+      condSell2 = d.sma < d
+      if self.getposition(d).size != 0 and (condSell1 or condSell2):
+        self.close(d, size=self.getposition(d).size)
 
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size != 0:
-        continue
-      
-      # has to be above 200 sma
-      if d < d.sma:
-        continue
-
-      # useful numbers
-      risk = 0.01*self.broker.get_value()
-      stoploss_diff = d.atr[0]*3
-      buysize = int(self.broker.get_value() / self.p.positions / d)
+      # numbers
+      posSize = int(self.broker.get_value() / d / self.p.positions)
 
       # we can't spend more than all our money
-      if available_cash/d < buysize:
+      if self.broker.get_cash() <= 0:
         continue
 
-      # long signals
-      if orderedstocks.index(d)+1 <= self.p.positions:
-        self.buy(d, size=buysize)
-        available_cash -= d*buysize
+      # buy stocks
+      condBuy1 = d > d.sma
+      if condBuy1:
+        self.order_target_size(d, posSize)
+        
+  def getrank(self, stock):
+    return stock.roc - abs(stock.rsi-50)
 
 class Momentum2(bt.Strategy):
   params = (
@@ -1388,7 +1380,7 @@ class Momentum2(bt.Strategy):
     self.rebalanced = False
 
     for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
+      d.atr = btind.AverageTrueRange(d, period=20)
       d.sma = btind.MovingAverageSimple(d, period=200)
       d.roc = btind.RateOfChange100(d, period=200)
       d.rsi = btind.RelativeStrengthIndex(d, period=20)
@@ -1401,36 +1393,28 @@ class Momentum2(bt.Strategy):
       return
     self.rebalanced = True
 
-    orderedstocks = sorted(self.datas, key=lambda stock: stock.roc - abs(stock.rsi-50), reverse=True)
-    available_cash = self.broker.get_cash()
+    rank = self.getrank
+    orderedstocks = sorted(self.datas, key=lambda stock: rank(stock), reverse=True)
 
-    # close positions
+    # rebalance
     for d in self.datas:
-      if self.getposition(d).size > 0:
-        cond1 = orderedstocks.index(d)+1 > self.p.positions
-        cond2 = d.sma < d
-        if cond1 or cond2: # exit indicator
-          self.close(d, size=self.getposition(d).size)
+      # sell stocks
+      condSell1 = orderedstocks.index(d)+1 > self.p.positions
+      condSell2 = d.sma < d
+      if self.getposition(d).size != 0 and (condSell1 or condSell2):
+        self.close(d, size=self.getposition(d).size)
 
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size != 0:
-        continue
-      
-      # has to be above 200 sma
-      if d < d.sma:
-        continue
-
-      # useful numbers
-      # risk = 0.02*self.broker.get_value()
-      # stoploss_diff = d.atr[0]*3
-      buysize = int(self.broker.get_value() / self.p.positions / d)
+      # numbers
+      posSize = int(self.broker.get_value() / d / self.p.positions)
 
       # we can't spend more than all our money
-      if available_cash/d < buysize:
+      if self.broker.get_cash() <= 0:
         continue
 
-      # long signals
-      if orderedstocks.index(d)+1 <= self.p.positions:
-        self.buy(d, size=buysize)
-        available_cash -= d*buysize
+      # buy stocks
+      condBuy1 = d > d.sma
+      if condBuy1:
+        self.order_target_size(d, posSize)
+
+  def getrank(self, stock):
+    return stock.roc - abs(stock.rsi-50)
