@@ -6,15 +6,15 @@ from os import listdir
 from random import random, shuffle
 from datetime import datetime
 
-strategies = [System2Crypto, BuyAndHoldAll]
+strategies = [System2, System2Test, BuyAndHoldAll]
 
 # pre-pick stocks
-dir = 'stocks/crypto'
+dir = 'stocks/2016'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.5:
+    if random() < 0.04:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
@@ -22,7 +22,7 @@ i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
     cerebro.broker = bt.brokers.BackBroker(slip_perc=0.005)
-    cerebro.broker.setcommission(commission=0.0016)
+    # cerebro.broker.setcommission(commission=0.0016)
     cerebro.addstrategy(strat)
 
     cerebro.addanalyzer(bt.analyzers.AnnualReturn)
@@ -61,19 +61,20 @@ for strat in strategies:
 
     ta = results.analyzers[3].get_analysis()
     if "won" in ta:
-        h1 = ['Total Trades', 'Total Won', 'Total Lost', 'Strike Rate', 'Average P/L', 'Overall P/L']
-        r1 = [ta.total.total, ta.won.total, ta.lost.total, round((ta.won.total/ta.total.closed)*100,2), round(ta.pnl.net.average, 2), round(ta.pnl.net.total,2)]
+        h1 = ['Total Trades', 'Total Won', 'Total Lost', 'Strike Rate', 'RRR', 'Average P/L', 'Overall P/L']
+        r1 = [ta.total.total, ta.won.total, ta.lost.total, round((ta.won.total/ta.total.closed)*100,2), round(abs(ta.won.pnl.average/ta.lost.pnl.average), 2), round(ta.pnl.net.average, 2), round(ta.pnl.net.total,2)]
         print(("{:<15}"*(len(h1)+1)).format('',*h1))
         print(("{:<15}"*(len(h1)+1)).format('',*r1))
     else:
         print(("{:<15}"*2).format('',"Trade Analysis Unavailable"))
 
-    numDays = len(results.observers[0].value)
-    arr = results.observers[0].value.get(0,numDays)
-    f = open("thing"+str(i)+".csv", 'w')
-    for price in arr:
-        f.write("{}\n".format(price))
-    f.close()
-    i += 1
+    # write equity curve to csv
+    # numDays = len(results.observers[0].value)
+    # arr = results.observers[0].value.get(0,numDays)
+    # f = open("thing"+str(i)+".csv", 'w')
+    # for price in arr:
+    #     f.write("{}\n".format(price))
+    # f.close()
+    # i += 1
 
     # cerebro.plot()

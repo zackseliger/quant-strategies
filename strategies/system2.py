@@ -52,7 +52,7 @@ class System2(bt.Strategy):
         continue
 
       # useful numbers
-      risk = 0.02*self.broker.get_value()
+      risk = 0.01*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
       buysize = int(risk / stoploss_diff)
 
@@ -118,7 +118,7 @@ class System2Test(bt.Strategy):
         continue
 
       # useful numbers
-      risk = 0.02*self.broker.get_value()
+      risk = 0.01*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
       buysize = int(risk / stoploss_diff)
 
@@ -181,7 +181,7 @@ class System2Test2(bt.Strategy):
         continue
 
       # useful numbers
-      risk = 0.02*self.broker.get_value()
+      risk = 0.01*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
       buysize = int(risk / stoploss_diff)
 
