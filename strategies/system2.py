@@ -17,7 +17,7 @@ class System2(bt.Strategy):
       d.atr = btind.AverageTrueRange(d, period=14)
       d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.volsig = ZackVolumeSignal(d)
+      d.volsig = ZackVolumeSignalOld(d)
       d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
       d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
@@ -83,7 +83,7 @@ class System2Test(bt.Strategy):
       d.atr = btind.AverageTrueRange(d, period=14)
       d.aroon = btind.AroonUpDown(d, period=25)
       d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
-      d.volsig = ZackVolumeSignal(d)
+      d.volsig = ZackVolumeSignalOld(d)
       d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
       d.rsi = btind.RelativeStrengthIndex(d, period=14)
 

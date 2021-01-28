@@ -6,15 +6,15 @@ from os import listdir
 from random import random, shuffle
 from datetime import datetime
 
-strategies = [System2, System2Test, BuyAndHoldAll]
+strategies = [GenericAroonStrategy, RSIStrategy, BuyAndHoldAll]
 
 # pre-pick stocks
-dir = 'stocks/2016'
+dir = 'stocks/2008'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.04:
+    if random() < 0.5:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
