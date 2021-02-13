@@ -4,6 +4,7 @@ import backtrader.feeds as btfeeds
 from Indicators import *
 from stats.stats import Statistics
 import random
+import datetime
 
 class LongShort(bt.Strategy):
   params = (
@@ -475,63 +476,6 @@ class SPYTestStrat(bt.Strategy):
         d.long = False
         available_cash -= d*buysize
 
-class DMIStrategy(bt.Strategy):
-  def __init__(self):
-    for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
-      dmi = btind.DirectionalMovementIndex(d, period=10)
-      d.dmi = dmi.plusDI - dmi.minusDI
-      d.extreme = DMIStoch(d, period=10, sumperiod=5)
-      d.rsi = btind.RelativeStrengthIndex(d, period=14)
-      d.volswitch = VolatilitySwitch(d, period=21)
-
-  def next(self):
-    orderedstocks = sorted(self.datas, key=lambda stock: (stock.rsi-50)**2)
-    # orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock)
-    # orderedstocks = self.datas
-    available_cash = self.broker.get_cash()
-
-    # close positions
-    for d in self.datas:
-      if self.getposition(d).size > 0: # manage longs
-        if d.dmi < 0: # exit indicator
-          self.close(d, size=self.getposition(d).size)
-          available_cash += d*self.getposition(d).size
-      if self.getposition(d).size < 0: # manage shorts
-        if d.dmi > 0: # exit indicator
-          self.close(d, size=self.getposition(d).size)
-          available_cash += d*self.getposition(d).size
-
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size != 0:
-        continue
-
-      # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*3
-      buysize = int(risk / stoploss_diff)
-
-      # we can't spend more than all our money
-      if available_cash/d < buysize:
-        continue
-
-      # we want volatility
-      if d.volswitch < 0.5:
-        continue
-
-      # long signals
-      if d.extreme[-1] < 30 and d.extreme >= 30 and d.dmi > 0:
-        self.buy(d, size=buysize)
-        d.long = True
-        available_cash -= d*buysize
-
-      # short signals
-      if d.extreme[-1] > 70 and d.extreme <= 70 and d.dmi < 0:
-        self.sell(d, size=buysize)
-        d.long = False
-        available_cash -= d*buysize
-
 class Momentum(bt.Strategy):
   params = (
     ('positions', 10),
@@ -654,6 +598,42 @@ class AbsStrengthStrategy(bt.Strategy):
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
+class MT5AcceleratorStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.mtAcc = MT5Accelerator(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.mtAcc < 0: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.mtAcc > 0:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
 class PFEStrategy(bt.Strategy):
   def __init__(self):
     for d in self.datas:
@@ -689,6 +669,42 @@ class PFEStrategy(bt.Strategy):
       if d.pfe > 0:
         self.buy(d, size=buysize)
         d.long = True
+        available_cash -= d*buysize
+
+class DMIStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.dmi = btind.DirectionalMovementIndex(d, period=14)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.dmi.minusDI > d.dmi.plusDI: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size != 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.dmi.plusDI > d.dmi.minusDI:
+        self.buy(d, size=buysize)
         available_cash -= d*buysize
 
 class GenericAroonStrategy(bt.Strategy):
@@ -842,3 +858,38 @@ class RSIStrategy(bt.Strategy):
       if d.aroonup > 70 and (d.rsi-50)**2 < 200:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
+
+class GeneratedStrategy2(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.aroon = btind.AroonUpDown(d, period=14)
+      d.schaff = SchaffTrend(d)
+      d.sma = btind.MovingAverageSimple(d)
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.schaff)
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.aroon.aroondown - d.sma < 19 - d.aroon.aroonup: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      buysize = int(risk / stoploss_diff)
+
+      # we can't spend more than all our money
+      if self.broker.get_cash() < buysize*d:
+        continue
+
+      # long signals
+      if True:
+        self.buy(d, size=buysize)

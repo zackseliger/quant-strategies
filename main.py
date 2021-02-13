@@ -6,23 +6,23 @@ from os import listdir
 from random import random, shuffle
 from datetime import datetime
 
-strategies = [GenericAroonStrategy, RSIStrategy, BuyAndHoldAll]
+strategies = [MT5AcceleratorStrategy, AbsStrengthStrategy, BuyAllThenSell]
 
 # pre-pick stocks
-dir = 'stocks/2008'
+dir = 'stocks/2016'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.5:
+    if random() < 0.1:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
 i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
-    cerebro.broker = bt.brokers.BackBroker(slip_perc=0.005)
-    # cerebro.broker.setcommission(commission=0.0016)
+    cerebro.broker = bt.brokers.BackBroker(slip_perc=0.01)
+    cerebro.broker.setcommission(commission=0.001)
     cerebro.addstrategy(strat)
 
     cerebro.addanalyzer(bt.analyzers.AnnualReturn)
@@ -34,6 +34,8 @@ for strat in strategies:
     for filename in stocks:
         cerebro.adddata(btfeeds.GenericCSVData(
             dataname=dir+'/'+filename,
+            # timeframe=bt.TimeFrame.Minutes, compression=30,
+            # dtformat=('%Y-%m-%d %H:%M:%S'),
             dtformat=('%Y-%m-%d'),
 
             datetime=0,
@@ -62,7 +64,9 @@ for strat in strategies:
     ta = results.analyzers[3].get_analysis()
     if "won" in ta:
         h1 = ['Total Trades', 'Total Won', 'Total Lost', 'Strike Rate', 'RRR', 'Average P/L', 'Overall P/L']
-        r1 = [ta.total.total, ta.won.total, ta.lost.total, round((ta.won.total/ta.total.closed)*100,2), round(abs(ta.won.pnl.average/ta.lost.pnl.average), 2), round(ta.pnl.net.average, 2), round(ta.pnl.net.total,2)]
+        closed = ta.total.closed if ta.total.closed > 0 else 1
+        lost_pnl = ta.lost.pnl.average if ta.lost.pnl.average != 0 else 1
+        r1 = [ta.total.total, ta.won.total, ta.lost.total, round((ta.won.total/closed)*100,2), round(abs(ta.won.pnl.average/lost_pnl), 2), round(ta.pnl.net.average, 2), round(ta.pnl.net.total,2)]
         print(("{:<15}"*(len(h1)+1)).format('',*h1))
         print(("{:<15}"*(len(h1)+1)).format('',*r1))
     else:

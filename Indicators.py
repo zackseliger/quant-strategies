@@ -138,8 +138,24 @@ class ZackVolumeSignal(bt.Indicator):
         self.lines.up = self.p.movav(priceUp, period=self.p.period)
         self.lines.down = self.p.movav(priceDown, period=self.p.period)
 
+class MT5Accelerator(bt.Indicator):
+    lines = ('acc',)
+    params = (
+        ('fastPeriod', 5),
+        ('slowPeriod', 34),
+        ('lookback', 5),
+        ('movav', btind.MovAv.Exponential)
+    )
+
+    def __init__(self):
+        fastMA = self.p.movav(self.data, period=self.p.fastPeriod)
+        slowMA = self.p.movav(self.data, period=self.p.slowPeriod)
+        diff = fastMA - slowMA
+        diffSum = btind.SumN(diff, period=self.p.lookback)
+        self.lines.acc = diff - diffSum/self.p.lookback
+
 class ZackMinMax(bt.Indicator):
-    lines = ('top', 'bot', 'mid')
+    lines = ('mid', 'top', 'bot')
     params = (
         ('period', 20),
     )

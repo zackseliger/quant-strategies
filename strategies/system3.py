@@ -1,32 +1,14 @@
 import backtrader as bt
 import backtrader.indicators as btind
 from Indicators import *
-from stats.stats import Statistics
 
 class System3(bt.Strategy):
-  params = (
-      ('log', False),
-  )
-
-  def log(self, message):
-    if self.p.log:
-      self.logfile.write(message+"\n")
-
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.pfe = PolarizedFractalEfficiency(d)
-
-      if self.p.log:
-        self.logfile = open('system3.txt', 'w')
-
-  def notify_order(self, order):
-    if order.status in [order.Completed]:
-      # logging
-      if not order.isbuy():
-        self.log(str(self.data.datetime.date(0))+" SELL "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2))+" P/L: $"+str(order.executed.pnl))
-      else:
-        self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
+      d.atrStdDev = btind.StdDev(d.atr, period=14)
+      d.aroon = btind.AroonUpDown(d, period=14)
+      d.strength = AbsoluteStrengthOscillator(d)
 
   def next(self):
     orderedstocks = self.datas
@@ -36,7 +18,7 @@ class System3(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit indicator
-        if d.pfe < 0 and d.pfe[-1] >= 0: # exit indicator
+        if (d.strength.bears > d.strength.bulls):
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -55,34 +37,17 @@ class System3(bt.Strategy):
         continue
 
       # long signals
-      if d.pfe > 0:
+      if d.strength.bulls > d.strength.bears:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
 class System3Test(bt.Strategy):
-  params = (
-      ('log', False),
-  )
-
-  def log(self, message):
-    if self.p.log:
-      self.logfile.write(message+"\n")
-
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.pfe = PolarizedFractalEfficiency(d)
-
-      if self.p.log:
-        self.logfile = open('system3test.txt', 'w')
-
-  def notify_order(self, order):
-    if order.status in [order.Completed]:
-      # logging
-      if not order.isbuy():
-        self.log(str(self.data.datetime.date(0))+" SELL "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2))+" P/L: $"+str(order.executed.pnl))
-      else:
-        self.log(str(self.data.datetime.date(0))+" BUY "+order.data._name+" "+str(order.size)+" "+str(round(order.executed.price,2)))
+      d.atrStdDev = btind.StdDev(d.atr, period=14)
+      d.aroon = btind.AroonUpDown(d, period=14)
+      d.strength = AbsoluteStrengthOscillator(d)
 
   def next(self):
     orderedstocks = self.datas
@@ -92,8 +57,8 @@ class System3Test(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit indicator
-        cond1 = d.pfe < 0 and d.pfe[-1] >= 0
-        if cond1: # exit indicator
+        cond2 = (d.strength.bears > d.strength.bulls)
+        if cond2: # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -112,6 +77,6 @@ class System3Test(bt.Strategy):
         continue
 
       # long signals
-      if d.pfe > 0:
+      if d.strength.bulls > d.strength.bears:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
