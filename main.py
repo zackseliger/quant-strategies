@@ -6,7 +6,7 @@ from os import listdir
 from random import random, shuffle
 from datetime import datetime
 
-strategies = [MT5AcceleratorStrategy, AbsStrengthStrategy, BuyAllThenSell]
+strategies = [CanslimStrategy, CanslimStrategyTest, BuyAllThenSell]
 
 # pre-pick stocks
 dir = 'stocks/2016'
@@ -22,7 +22,7 @@ i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
     cerebro.broker = bt.brokers.BackBroker(slip_perc=0.01)
-    cerebro.broker.setcommission(commission=0.001)
+    cerebro.broker.setcommission(commission=0.0016)
     cerebro.addstrategy(strat)
 
     cerebro.addanalyzer(bt.analyzers.AnnualReturn)

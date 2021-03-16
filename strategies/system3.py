@@ -6,9 +6,7 @@ class System3(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.atrStdDev = btind.StdDev(d.atr, period=14)
-      d.aroon = btind.AroonUpDown(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
   def next(self):
     orderedstocks = self.datas
@@ -18,7 +16,7 @@ class System3(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit indicator
-        if (d.strength.bears > d.strength.bulls):
+        if (d.rsi < 70 and d.rsi[-1] >= 70):
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -37,7 +35,7 @@ class System3(bt.Strategy):
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears:
+      if d.rsi > 30:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
@@ -45,9 +43,8 @@ class System3Test(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.atrStdDev = btind.StdDev(d.atr, period=14)
-      d.aroon = btind.AroonUpDown(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.shortrsi = btind.RelativeStrengthIndex(d, period=2, safediv=True)
 
   def next(self):
     orderedstocks = self.datas
@@ -57,8 +54,7 @@ class System3Test(bt.Strategy):
     for d in self.datas:
       if self.getposition(d).size > 0:
         # exit indicator
-        cond2 = (d.strength.bears > d.strength.bulls)
-        if cond2: # exit indicator
+        if (d.rsi < 70 and d.rsi[-1] >= 70) or d < d.stoploss:
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -77,6 +73,7 @@ class System3Test(bt.Strategy):
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears:
+      if d.rsi > 30 and d.shortrsi < 15:
         self.buy(d, size=buysize)
+        d.stoploss = d - stoploss_diff
         available_cash -= d*buysize

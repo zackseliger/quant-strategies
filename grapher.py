@@ -7,7 +7,8 @@ from random import random, shuffle
 if __name__ == "__main__":
 	# setup strategy
 	cerebro = bt.Cerebro()
-	cerebro.addstrategy(TestStrategy2, recordstats=True)
+	# cerebro.addstrategy(TestStrategy2, recordstats=True)
+	cerebro.addindicator(VPN)
 
 	# get stocks
 	dirs = ['stocks/growth2018']

@@ -10,12 +10,18 @@ class BuyAndHoldAll(bt.Strategy):
       self.buy(d, size=size)
 
 class BuyAllThenSell(bt.Strategy):
+  params = (
+    ('crypto', False),
+  )
+
   def start(self):
     self.val_start = self.broker.get_cash()
 
   def nextstart(self):
     for d in self.datas:
       size = int(self.broker.get_cash() / d / len(self.datas))
+      if self.p.crypto == True:
+        size = self.broker.get_cash() / d / len(self.datas)
       self.buy(d, size=size)
 
   def next(self):

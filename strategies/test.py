@@ -525,6 +525,11 @@ class Momentum(bt.Strategy):
     return stock.roc - abs(stock.rsi-50)
 
 class VolumeSignalStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
@@ -551,7 +556,12 @@ class VolumeSignalStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -563,10 +573,15 @@ class VolumeSignalStrategy(bt.Strategy):
         available_cash -= d*buysize
 
 class AbsStrengthStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d, movav=btind.MovAv.Smoothed)
+      d.strength = AbsoluteStrengthOscillator(d)
 
   def next(self):
     orderedstocks = self.datas
@@ -587,7 +602,12 @@ class AbsStrengthStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -599,6 +619,11 @@ class AbsStrengthStrategy(bt.Strategy):
         available_cash -= d*buysize
 
 class MT5AcceleratorStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
@@ -623,7 +648,12 @@ class MT5AcceleratorStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -635,6 +665,11 @@ class MT5AcceleratorStrategy(bt.Strategy):
         available_cash -= d*buysize
 
 class PFEStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
@@ -659,7 +694,12 @@ class PFEStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -672,6 +712,11 @@ class PFEStrategy(bt.Strategy):
         available_cash -= d*buysize
 
 class DMIStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
@@ -696,7 +741,12 @@ class DMIStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -707,13 +757,17 @@ class DMIStrategy(bt.Strategy):
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
-class GenericAroonStrategy(bt.Strategy):
+class AroonStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
       d.aroonup = btind.AroonUp(d, period=25)
       d.aroondown = btind.AroonDown(d, period=25)
-      d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
 
   def next(self):
     orderedstocks = self.datas
@@ -734,7 +788,12 @@ class GenericAroonStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
@@ -745,88 +804,15 @@ class GenericAroonStrategy(bt.Strategy):
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
-class VolOscStrategy(bt.Strategy):
-  def __init__(self):
-    for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
-      d.aroonup = btind.AroonUp(d, period=25)
-      d.aroondown = btind.AroonDown(d, period=25)
-      d.volOsc = VolumeOsc(d, fastPeriod=14, slowPeriod=21)
-
-  def next(self):
-    orderedstocks = self.datas
-    available_cash = self.broker.get_cash()
-
-    # close positions
-    for d in self.datas:
-      if self.getposition(d).size > 0: # manage longs
-        if d.aroondown > 70 and d.aroondown > d.aroondown[-1]: # exit indicator
-          self.close(d, size=self.getposition(d).size)
-          available_cash += d*self.getposition(d).size
-
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size > 0:
-        continue
-
-      # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*3
-      buysize = int(risk / stoploss_diff)
-
-      # we can't spend more than all our money
-      if available_cash/d < buysize:
-        continue
-
-      # long signals
-      if d.aroonup > 70 and d.volOsc > 0:
-        self.buy(d, size=buysize)
-        available_cash -= d*buysize
-
-class VolatilitySwitchStrategy(bt.Strategy):
-  def __init__(self):
-    for d in self.datas:
-      d.atr = btind.AverageTrueRange(d, period=14)
-      d.aroonup = btind.AroonUp(d, period=25)
-      d.aroondown = btind.AroonDown(d, period=25)
-      d.volswitch = VolatilitySwitch(d)
-
-  def next(self):
-    orderedstocks = self.datas
-    available_cash = self.broker.get_cash()
-
-    # close positions
-    for d in self.datas:
-      if self.getposition(d).size > 0: # manage longs
-        if d.aroondown > 70 and d.aroondown > d.aroondown[-1]: # exit indicator
-          self.close(d, size=self.getposition(d).size)
-          available_cash += d*self.getposition(d).size
-
-    # open positions
-    for d in orderedstocks:
-      if self.getposition(d).size > 0:
-        continue
-
-      # useful numbers
-      risk = 0.02*self.broker.get_value()
-      stoploss_diff = d.atr[0]*3
-      buysize = int(risk / stoploss_diff)
-
-      # we can't spend more than all our money
-      if available_cash/d < buysize:
-        continue
-
-      # long signals
-      if d.aroonup > 70 and d.volswitch > 0.5:
-        self.buy(d, size=buysize)
-        available_cash -= d*buysize
-
 class RSIStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.aroonup = btind.AroonUp(d, period=25)
-      d.aroondown = btind.AroonDown(d, period=25)
       d.rsi = btind.RelativeStrengthIndex(d, period=14)
 
   def next(self):
@@ -836,7 +822,7 @@ class RSIStrategy(bt.Strategy):
     # close positions
     for d in self.datas:
       if self.getposition(d).size > 0: # manage longs
-        if d.aroondown > 70 and d.aroondown > d.aroondown[-1]: # exit indicator
+        if d.rsi < 70 and d.rsi[-1] >= 70: # exit indicator
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -848,14 +834,66 @@ class RSIStrategy(bt.Strategy):
       # useful numbers
       risk = 0.02*self.broker.get_value()
       stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
       buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
 
       # we can't spend more than all our money
       if available_cash/d < buysize:
         continue
 
       # long signals
-      if d.aroonup > 70 and (d.rsi-50)**2 < 200:
+      if d.rsi > 30:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class SecondRSIStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.adx = btind.AverageDirectionalMovementIndex(d, period=5)
+      d.rsi = MoneyFlowIndex(d, period=2)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.close > d.high[-1]: # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.rsi < 15 and d.adx > 35:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
@@ -893,3 +931,318 @@ class GeneratedStrategy2(bt.Strategy):
       # long signals
       if True:
         self.buy(d, size=buysize)
+
+class MixedStrategy1(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.volsig = ZackVolumeSignal(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.strength = AbsoluteStrengthOscillator(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = (d.volsig.down > d.volsig.up and d.volsig.down > d.volsig.down[-1])
+        cond2 = (d.rsi < 70 and d.rsi[-1] > 70)
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*5
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.bulls > d.strength.bears:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class MixedStrategy2(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.volsig = ZackVolumeSignal(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.strength = AbsoluteStrengthOscillator(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = (d.volsig.down > d.volsig.up and d.volsig.down > d.volsig.down[-1])
+        cond2 = (d.rsi < 70 and d.rsi[-1] > 70)
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*4
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.bulls > d.strength.bears:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class BearishEngulfingStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = d.close > d.high[-1]
+        if cond1:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*4
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      cond1 = d.close < d.open
+      cond2 = d.close[-1] > d.open[-1]
+      cond3 = d.open > d.close[-1]
+      cond4 = d.close < d.open[-1]
+      if cond1 and cond2 and cond3 and cond4:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class BBandsStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.bbands = btind.BollingerBands(d, period=20, devfactor=2.0, movav=btind.MovAv.Exponential)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        if d > d.bbands.mid or d < d.stoploss:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      risk = 0.02*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*4
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d < d.bbands.bot:
+        self.buy(d, size=buysize)
+        d.stoploss = d - stoploss_diff
+        available_cash -= d*buysize
+
+class CanslimStrategy(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.atrp = ATRP(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.volsig = ZackVolumeSignal(d)
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = (d.volsig.down > d.volsig.down[-1] and d.volsig.down > d.volsig.up)
+        cond2 = d < d.stoploss
+        cond3 = (d.rsi < 70 and d.rsi[-1] > 70 and d.rsi[-2] > 70 and d.rsi[-3] > 70)
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*4
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      cond1 = d.rsi < 70
+      cond2 = d.volsig.up > d.volsig.up[-1] and d.volsig.up > d.volsig.down
+      if cond2:
+        self.buy(d, size=buysize)
+        d.stoploss = d - stoploss_diff
+        available_cash -= d*buysize
+
+class CanslimStrategyTest(bt.Strategy):
+  params = (
+    ('interday', False),
+    ('crypto', False)
+  )
+
+  def __init__(self):
+    for d in self.datas:
+      d.atr = btind.AverageTrueRange(d, period=14)
+      d.atrp = ATRP(d)
+      d.rsi = btind.RelativeStrengthIndex(d, period=14)
+      d.volsig = ZackVolumeSignal(d)
+      d.ma = btind.MovAv.Exponential(d, period=20)
+      self.numpos = 0
+
+  def next(self):
+    orderedstocks = sorted(self.datas, key=lambda stock: stock.atr/stock, reverse=True)
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond1 = (d.volsig.down > d.volsig.down[-1] and d.volsig.down > d.volsig.up)
+        cond2 = d < d.stoploss
+        cond3 = (d.rsi < 70 and d.rsi[-1] > 70 and d.rsi[-2] > 70 and d.rsi[-3] > 70)
+        if cond1 or cond2:
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # calculate averages
+    avgrsi = 0
+    for d in self.datas:
+      avgrsi += d.rsi
+    avgrsi /= len(self.datas)
+
+    # open positions
+    for d in orderedstocks:
+      # useful numbers
+      risk = 0.01*self.broker.get_value()
+      stoploss_diff = d.atr[0]*3
+      if self.p.interday == True:
+        risk = 0.01*self.broker.get_value()
+        stoploss_diff = d.atr[0]*4
+      buysize = int(risk / stoploss_diff)
+      if self.p.crypto == True:
+        buysize = risk / stoploss_diff
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      cond1 = d.atrp < 0
+      cond2 = d.volsig.up > d.volsig.up[-1] and d.volsig.up > d.volsig.down
+      cond3 = d.rsi > avgrsi
+      cond4 = (d.high+d.low+d.close)/3 > d.ma
+      if cond2 and cond1 and cond4:
+        self.buy(d, size=buysize)
+        d.stoploss = d - stoploss_diff
+        available_cash -= d*buysize

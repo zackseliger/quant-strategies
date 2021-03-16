@@ -3,11 +3,12 @@ import json
 from datetime import datetime
 
 # requests.get(baseRESTURL+"/0/public/OHLC?pair="+pair.replace('/','').lower()+"&interval="+str(interval))
-interval = "30" # in minutes
+interval = "60" # in minutes
 
 def download_pair(pair):
-	# get stock data from alphavantage
-	r = requests.get('https://api.kraken.com/0/public/OHLC?pair={}&interval={}'.format(pair.replace("/","").lower(), interval))
+	# get stock data from kraken
+	req_url = 'https://api.kraken.com/0/public/OHLC?pair={}&interval={}'.format(pair.replace("/","").lower(), interval)
+	r = requests.get(req_url)
 	r = r.json()['result']
 	results = r[list(r.keys())[0]]
 
@@ -31,8 +32,8 @@ def download_pair(pair):
 
 pairs = [
 	"ADA/USD", "BCH/USD", "DASH/USD", "DOT/USD", "ETC/USD", "OMG/USD", "NANO/USD", "WAVES/USD", "QTUM/USD",
-	"ETH/USD", "GNO/USD", "KAVA/USD", "KEEP/USD", "LINK/USD", "LTC/USD", "XBT/USD", "XDG/USD",
-	"XMR/USD", "XRP/USD"
+	"ETH/USD", "GNO/USD", "KAVA/USD", "KEEP/USD", "LINK/USD", "XBT/USD", "XDG/USD", "XRP/USD", "LTC/USD",
+	"XMR/USD"
 	]
 
 for pair in pairs:

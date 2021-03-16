@@ -443,6 +443,21 @@ class MoneyFlowIndex(bt.Indicator):
         mfi = bt.DivByZero(btind.SumN(posmf, period=self.p.period), btind.SumN(negmf, period=self.p.period))
         self.lines.mfi = 100 - 100 / (1 + mfi)
 
+class RelativeStrengthIndex(bt.Indicator):
+    lines = ('rsi',)
+    params = (
+        ('period', 14),
+        ('movav', btind.MovAv.Smoothed)
+    )
+
+    def __init__(self):
+        price = (self.data.high + self.data.low + self.data.close) / 3
+        pricema = self.p.movav(price, period=self.p.period)
+        posrs = btind.If(price(0) > price(-1), price, 0)
+        negrs = btind.If(price(0) < price(-1), price, 0)
+        rsi = bt.DivByZero(btind.SumN(posrs, period=self.p.period), btind.SumN(negrs, period=self.p.period))
+        self.lines.rsi = 100 - 100 / (1 + rsi)
+
 class PolarizedFractalEfficiency(bt.Indicator):
     lines = ('pfe',)
     params = (
@@ -487,3 +502,61 @@ class VolumeOsc(bt.Indicator):
         fast = self.p.movav(self.data.volume, period=self.p.fastPeriod)
         slow = self.p.movav(self.data.volume, period=self.p.slowPeriod)
         self.lines.osc = (fast - slow) / slow
+
+class AroonDown(bt.Indicator):
+    lines = ('down',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        lidx = btind.FindFirstIndexLowest(self.data.low, period=self.p.period)
+        self.lines.down = (self.p.period - 1 - lidx) * 100 / (self.p.period - 1)#(100.0 / self.p.period) * (self.p.period - llidx)
+
+class MarketMeannessIndicator(bt.Indicator):
+    lines = ('mmi',)
+    params = (
+        ('period', 200),
+        ('movav', btind.MovAv.Hull)
+    )
+
+    def __init__(self):
+        m = (btind.Highest(self.data.high, period=self.p.period)+btind.Lowest(self.data.low, period=self.p.period)) / 2
+        nhh = btind.If(self.data>m, btind.If(self.data>self.data(-1), 1, 0), 0)
+        nll = btind.If(self.data<m, btind.If(self.data<self.data(-1), 1, 0), 0)
+        nh = btind.SumN(nhh, period=self.p.period)
+        nl = btind.SumN(nll, period=self.p.period)
+        mmi = 100*(nl+nh)/(self.p.period-1)
+
+        self.lines.mmi = self.p.movav(mmi, period=self.p.period)
+
+class VPN(bt.Indicator):
+    lines = ('up','down')
+    params = (
+        ('period', 20),
+        ('movav', btind.MovAv.Exponential),
+    )
+
+    def __init__(self):
+        atr = btind.AverageTrueRange(self.data, period=self.p.period)
+        price = (self.data.high+self.data.low+self.data.close) / 3
+        up = btind.If(price(0) > price(-1)+atr*0.1, self.data.volume(0), 0)
+        down = btind.If(price(0) < price(-1)-atr*0.1, self.data.volume(0), 0)
+
+        totalVol = btind.SumN(self.data.volume, period=self.p.period)
+
+        self.lines.up = self.p.movav(up, period=self.p.period) / totalVol
+        self.lines.down = self.p.movav(down, period=self.p.period) / totalVol
+
+class ATRP(bt.Indicator):
+    lines = ('diff',)
+    params = (
+        ('slowperiod', 20),
+        ('fastperiod', 5),
+        ('movav', btind.MovAv.Smoothed),
+    )
+
+    def __init__(self):
+        slow = self.p.movav(btind.TrueRange(self.data)/self.data.close, period=self.p.slowperiod)
+        fast = self.p.movav(btind.TrueRange(self.data)/self.data.close, period=self.p.fastperiod)
+        self.lines.diff = fast - slow
