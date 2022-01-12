@@ -8,10 +8,10 @@ cerebro = bt.Cerebro()
 cerebro.broker = bt.brokers.BackBroker(slip_perc=0.005)
 cerebro.broker.setcommission(commission=0.001)
 # cerebro.addstrategy(System2)
-cerebro.addindicator(ATRP)
+cerebro.addindicator(DidiIndex)
 
 cerebro.adddata(btfeeds.GenericCSVData(
-	dataname='stocks/2016/BAC.csv',
+	dataname='stocks/growth2019/FSLY.csv',
 	# timeframe=bt.TimeFrame.Minutes, compression=30,
 	# dtformat=('%Y-%m-%d %H:%M:%S'),
 	dtformat=('%Y-%m-%d'),

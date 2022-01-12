@@ -6,15 +6,15 @@ from os import listdir
 from random import random, shuffle
 from datetime import datetime
 
-strategies = [CanslimStrategy, CanslimStrategyTest, BuyAllThenSell]
+strategies = [AbsStrengthStrategy, RVIStrategy, RVIStrategy2, BuyAllThenSell]
 
 # pre-pick stocks
-dir = 'stocks/2016'
+dir = 'stocks/growth2018'
 stocks = []
 files = listdir(dir)
 shuffle(files)
 for filename in files:
-    if random() < 0.1:
+    if random() < 0.5:
         stocks.append(filename)
 
 print("sharpe ratio, avg_annual_returns / maxdrawdown")
@@ -22,7 +22,7 @@ i = 0
 for strat in strategies:
     cerebro = bt.Cerebro()
     cerebro.broker = bt.brokers.BackBroker(slip_perc=0.01)
-    cerebro.broker.setcommission(commission=0.0016)
+    # cerebro.broker.setcommission(commission=0.0016)
     cerebro.addstrategy(strat)
 
     cerebro.addanalyzer(bt.analyzers.AnnualReturn)

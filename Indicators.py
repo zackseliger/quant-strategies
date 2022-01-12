@@ -138,6 +138,25 @@ class ZackVolumeSignal(bt.Indicator):
         self.lines.up = self.p.movav(priceUp, period=self.p.period)
         self.lines.down = self.p.movav(priceDown, period=self.p.period)
 
+class ZackVolumeSignalStdDev(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('period', 12),
+        ('movav', btind.MovAv.Exponential),
+        ('smoothPeriod', 3)
+    )
+
+    def __init__(self):
+        stdev = btind.StdDev(self.data.volume, period=self.p.period)
+        price = self.data.close
+
+        priceUp = btind.If(stdev(0)>stdev(-1), btind.If(price(0)>price(-1), (price(0)-price(-1))/price(0), 0), 0)
+        priceDown = btind.If(stdev(0)>stdev(-1), btind.If(price(0)<price(-1), (price(-1)-price(0))/price(0), 0), 0)
+        upSmoothed = self.p.movav(priceUp, period=self.p.period)
+        downSmoothed = self.p.movav(priceDown, period=self.p.period)
+        self.lines.up = self.p.movav(upSmoothed, period=self.p.smoothPeriod)
+        self.lines.down = self.p.movav(downSmoothed, period=self.p.smoothPeriod)
+
 class MT5Accelerator(bt.Indicator):
     lines = ('acc',)
     params = (
@@ -268,6 +287,141 @@ class AbsoluteStrengthOscillator(bt.Indicator):
 
         self.lines.bulls = self.p.movav(avgBulls, period=self.p.smoothPeriod)
         self.lines.bears = self.p.movav(avgBears, period=self.p.smoothPeriod)
+
+class Vortex(bt.Indicator):
+    lines = ('VIU', 'VID')
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        viu = btind.SumN(abs(self.data.high - self.data.low(-1)), period=self.p.period)
+        vid = btind.SumN(abs(self.data.low - self.data.high(-1)), period=self.p.period)
+        str = btind.SumN(btind.AverageTrueRange(self.data, period=1), period=self.p.period)
+        self.lines.VIU = viu / str
+        self.lines.VID = vid / str
+
+# fixed-length moving average
+class SWMA(bt.Indicator):
+    lines = ('ma',)
+
+    def __init__(self):
+        self.lines.ma = self.data(0)*1/6 + self.data(-1)*2/6 + self.data(-2)*2/6 + self.data(-3)*1/6
+
+class RVI(bt.Indicator):
+    lines = ('rvi', 'sig')
+    params = (
+        ('period', 10),
+    )
+
+    def __init__(self):
+        self.lines.rvi = btind.SumN(SWMA(self.data.close-self.data.open), period=self.p.period) / btind.SumN(SWMA(self.data.high-self.data.low), period=self.p.period)
+        self.lines.sig = SWMA(self.lines.rvi)
+
+class WIMA(bt.Indicator):
+    lines = ('ma',)
+    params = (
+        ('period', 14),
+    )
+
+    # def __init__(self):
+    #     self.lines.ma = (self.data + self.lines.ma(-1) * (self.p.period-1)) / self.p.period
+
+    def nextstart(self):
+        self.lines.ma[0] = sum(self.data.get(size=self.p.period)) / self.p.period
+
+    def next(self):
+        self.lines.ma[0] = (self.data + self.lines.ma[-1] * (self.p.period-1)) / self.p.period
+
+class QQE(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('rsi_period', 8),
+        ('rsi_smoothing_period', 1),
+        ('atr_period', 14),
+        ('fast_mult', 3),
+        ('slow_mult', 4.236)
+    )
+
+    def __init__(self):
+        rsi_ema = btind.MovAv.Exponential(btind.RSI(self.data, period=self.p.rsi_period), period=self.p.rsi_smoothing_period)
+
+        TH = btind.If(rsi_ema(-1) > rsi_ema, rsi_ema(-1), rsi_ema)
+        TL = btind.IF(rsi_ema(-1) < rsi_ema, rsi_ema(-1), rsi_ema)
+        TR = TH - TL
+
+        atr_rsi = WIMA(TR, period=self.p.atr_period) # should be WIMA
+        smoothed_atr_rsi = WIMA(atr_rsi, period=self.p.atr_period) # should be WIMA
+
+        delta_fast_atr_rsi = smoothed_atr_rsi * self.p.fast_mult
+
+        newshortband = rsi_ema + delta_fast_atr_rsi
+        newlongband = rsi_ema - delta_fast_atr_rsi
+
+        # longband = btind.If(rsi_ema(-1) > longband) # can't reasonably continue...
+
+class HLCTrend(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('close_period', 5),
+        ('low_period', 13),
+        ('high_period', 34),
+        ('movav', btind.MovAv.Exponential),
+    )
+
+    def __init__(self):
+        emac = self.p.movav(self.data.close, period=self.p.close_period)
+        emal = self.p.movav(self.data.low, period=self.p.low_period)
+        emah = self.p.movav(self.data.high, period=self.p.high_period)
+
+        self.lines.up = emac - emah
+        self.lines.down = emal - emac
+
+class ZackLargestCandle(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('lookback', 10),
+        ('period', 10),
+        ('smoothingPeriod', 2),
+        ('movav', btind.MovAv.Exponential),
+    )
+
+    def __init__(self):
+        upCandles = btind.If(self.data.close > self.data.open, (self.data.close - self.data.open) / self.data.open, 0)
+        downCandles = btind.If(self.data.close < self.data.open, (self.data.open - self.data.close) / self.data.open, 0)
+
+        hUpCandle = btind.Highest(upCandles, period=self.p.lookback)
+        hDownCandle = btind.Highest(downCandles, period=self.p.lookback)
+
+        up1 = self.p.movav(upCandles, period=self.p.period) / btind.If(hDownCandle == 0, 0.01, hDownCandle)
+        down1 = self.p.movav(downCandles, period=self.p.period) / btind.If(hUpCandle == 0, 0.01, hUpCandle)
+
+        self.lines.up = self.p.movav(up1, period=self.p.smoothingPeriod)
+        self.lines.down = self.p.movav(down1, period=self.p.smoothingPeriod)
+
+class DidiIndex(bt.Indicator):
+    lines = ('up', 'down')
+    params = (
+        ('short', 3),
+        ('mid', 8),
+        ('long', 30),
+        ('movav', btind.MovAv.Exponential),
+    )
+
+    def __init__(self):
+        self.lines.up = self.p.movav(self.data.close, period=self.p.short) - self.p.movav(self.data.close, period=self.p.mid)
+        self.lines.down = self.p.movav(self.data.close, period=self.p.long) - self.p.movav(self.data.close, period=self.p.mid)
+
+class MADiff(bt.Indicator):
+    lines = ('sig',)
+    params = (
+        ('short', 3),
+        ('long', 8),
+        ('movav', btind.MovAv.Exponential),
+    )
+
+    def __init__(self):
+        self.lines.sig = self.p.movav(self.data.close, period=self.p.short) - self.p.movav(self.data.close, period=self.p.long)
 
 class SchaffTrend(bt.Indicator):
     lines = ('trend',)

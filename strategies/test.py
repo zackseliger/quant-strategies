@@ -476,7 +476,7 @@ class SPYTestStrat(bt.Strategy):
         d.long = False
         available_cash -= d*buysize
 
-class Momentum(bt.Strategy):
+class MomentumStrategy(bt.Strategy):
   params = (
     ('positions', 10),
   )
@@ -572,7 +572,7 @@ class VolumeSignalStrategy(bt.Strategy):
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
-class AbsStrengthStrategy(bt.Strategy):
+class VolumeSignalStDevStrategy(bt.Strategy):
   params = (
     ('interday', False),
     ('crypto', False)
@@ -581,7 +581,7 @@ class AbsStrengthStrategy(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.strength = AbsoluteStrengthOscillator(d)
+      d.volsig = ZackVolumeSignalStdDev(d)
 
   def next(self):
     orderedstocks = self.datas
@@ -589,8 +589,10 @@ class AbsStrengthStrategy(bt.Strategy):
 
     # close positions
     for d in self.datas:
-      if self.getposition(d).size > 0: # manage longs
-        if (d.strength.bears > d.strength.bulls and d.strength.bears[-1] <= d.strength.bulls[-1]): # exit indicator
+      if self.getposition(d).size > 0:
+        # exit conditions
+        cond2 = (d.volsig.down > d.volsig.up and d.volsig.down[-1] <= d.volsig.up[-1])
+        if cond2:
           self.close(d, size=self.getposition(d).size)
           available_cash += d*self.getposition(d).size
 
@@ -614,7 +616,7 @@ class AbsStrengthStrategy(bt.Strategy):
         continue
 
       # long signals
-      if d.strength.bulls > d.strength.bears:
+      if d.volsig.up > d.volsig.down:
         self.buy(d, size=buysize)
         available_cash -= d*buysize
 
@@ -720,7 +722,7 @@ class DMIStrategy(bt.Strategy):
   def __init__(self):
     for d in self.datas:
       d.atr = btind.AverageTrueRange(d, period=14)
-      d.dmi = btind.DirectionalMovementIndex(d, period=14)
+      d.dmi = btind.DirectionalMovementIndex(d, period=14, movav=btind.MovAv.Hull)
 
   def next(self):
     orderedstocks = self.datas
@@ -1245,4 +1247,275 @@ class CanslimStrategyTest(bt.Strategy):
       if cond2 and cond1 and cond4:
         self.buy(d, size=buysize)
         d.stoploss = d - stoploss_diff
+        available_cash -= d*buysize
+
+class AbsStrengthStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = AbsoluteStrengthOscillator(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.strength.bears > d.strength.bulls and d.strength.bears[-1] <= d.strength.bulls[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.bulls > d.strength.bears and d.strength.bulls[-1] <= d.strength.bears[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class VortexStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = Vortex(d, period=7)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.strength.VID > d.strength.VIU and d.strength.VID[-1] <= d.strength.VIU[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.VIU > d.strength.VID and d.strength.VIU[-1] <= d.strength.VID[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class RVIStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = RVI(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.strength.sig > d.strength.rvi and d.strength.sig[-1] <= d.strength.rvi[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.rvi > d.strength.sig and d.strength.rvi[-1] <= d.strength.sig[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class RVIStrategy2(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = RVI(d)
+      d.atr = btind.AverageTrueRange(d, period=14)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if d.low <= d.stop_point:
+          self.close(d, size=self.getposition(d).size, price=d.stop_point)
+          available_cash += d*self.getposition(d).size
+        elif d.high >= d.profit_point:
+          self.close(d, size=self.getposition(d).size, price=d.profit_point)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.rvi > d.strength.sig and d.strength.rvi[-1] <= d.strength.sig[-1]:
+        d.stop_point = d.close-d.atr*2
+        d.profit_point = d.close+d.atr*3
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class HLCTrendStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = HLCTrend(d, close_period=2, low_period=8, high_period=27)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.strength.down > d.strength.up and d.strength.down[-1] <= d.strength.up[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.up > d.strength.down and d.strength.up[-1] <= d.strength.down[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+
+class ZackLargestCandleStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.strength = ZackLargestCandle(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.strength.down > d.strength.up and d.strength.down[-1] <= d.strength.up[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.strength.up > d.strength.down and d.strength.up[-1] <= d.strength.down[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class DidiIndexStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.didi = DidiIndex(d)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.didi.down > d.didi.up and d.didi.down[-1] <= d.didi.up[-1]): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.didi.up > d.didi.down and d.didi.up[-1] <= d.didi.down[-1]:
+        self.buy(d, size=buysize)
+        available_cash -= d*buysize
+
+class MADiffStrategy(bt.Strategy):
+  def __init__(self):
+    for d in self.datas:
+      d.diff = MADiff(d, short=6, long=19, movav=btind.MovAv.Exponential)
+
+  def next(self):
+    orderedstocks = self.datas
+    available_cash = self.broker.get_cash()
+
+    # close positions
+    for d in self.datas:
+      if self.getposition(d).size > 0: # manage longs
+        if (d.diff.sig < 0 and d.diff.sig[-1] >= 0): # exit indicator
+          self.close(d, size=self.getposition(d).size)
+          available_cash += d*self.getposition(d).size
+
+    # open positions
+    for d in orderedstocks:
+      if self.getposition(d).size > 0:
+        continue
+
+      # useful numbers
+      buysize = int(0.1*self.broker.get_value() / d)
+
+      # we can't spend more than all our money
+      if available_cash/d < buysize:
+        continue
+
+      # long signals
+      if d.diff.sig > 0 and d.diff.sig[-1] <= 0:
+        self.buy(d, size=buysize)
         available_cash -= d*buysize
